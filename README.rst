@@ -1,22 +1,19 @@
-What happens when...
-====================
+Este repositorio es la versión traducida al castellano del recurso de `Alex Waynor`_, `"What happens when..."`_. 
 
-This repository is an attempt to answer the age-old interview question "What
-happens when you type google.com into your browser's address box and press
-enter?"
+Alex Waynor no está relacionado con este trabajo ni ha revisado la traducción. 
 
-Except instead of the usual story, we're going to try to answer this question
-in as much detail as possible. No skipping out on anything.
+¿Qué pasa cuando...?
+=====================
 
-This is a collaborative process, so dig in and try to help out! There are tons
-of details missing, just waiting for you to add them! So send us a pull
-request, please!
+Este repositorio es un intento de responder a la antigua pregunta "¿Qué ocurre cuando escribes *google.com* en tu la barra de direcciones de tu navegador y pulsas *Enter*?"
 
-This is all licensed under the terms of the `Creative Commons Zero`_ license.
+A excepción de las respuesta típica, intentaremos tratar de responder a esta pregunta con el mayor detalle posible. Sin dejar de lado ningún detalle. 
 
-Read this in `简体中文`_ (simplified Chinese), `日本語`_ (Japanese) and `한국어`_
-(Korean). NOTE: these have not been reviewed by the alex/what-happens-when
-maintainers.
+Este es un proceso colaborativo, ¡así que investiga sobre la sección que más te guste y ayúdanos! Hay muchísimos detalles faltantes, ¡están esperando a que los añadas! ¡Envíanos un *pull request*, por favor!
+
+Este trabajo está licenciado bajo la licencia `Creative Commons Zero`_.
+
+También puedes leerlo en  `简体中文`_ (chino simplificado), `日本語`_ (japonés) y `한국어`_(koreano). También, por supuesto, la versión original de `"What happens when..."`_ en inglés. 
 
 Table of Contents
 ====================
@@ -25,80 +22,52 @@ Table of Contents
    :backlinks: none
    :local:
 
-The "g" key is pressed
-----------------------
-The following sections explain the physical keyboard actions
-and the OS interrupts. When you press the key "g" the browser receives the
-event and the auto-complete functions kick in.
-Depending on your browser's algorithm and if you are in
-private/incognito mode or not various suggestions will be presented
-to you in the dropdown below the URL bar. Most of these algorithms sort
-and prioritize results based on search history, bookmarks, cookies, and
-popular searches from the internet as a whole. As you are typing
-"google.com" many blocks of code run and the suggestions will be refined
-with each keypress. It may even suggest "google.com" before you finish typing
-it.
+La tecla "g" es presionada
+----------------------------
 
-The "enter" key bottoms out
----------------------------
+Las siguientes secciones explican el comportamiento físico del teclado y las interrupciones del sistema operativo. 
 
-To pick a zero point, let's choose the Enter key on the keyboard hitting the
-bottom of its range. At this point, an electrical circuit specific to the enter
-key is closed (either directly or capacitively). This allows a small amount of
-current to flow into the logic circuitry of the keyboard, which scans the state
-of each key switch, debounces the electrical noise of the rapid intermittent
-closure of the switch, and converts it to a keycode integer, in this case 13.
-The keyboard controller then encodes the keycode for transport to the computer.
-This is now almost universally over a Universal Serial Bus (USB) or Bluetooth
-connection, but historically has been over PS/2 or ADB connections.
+Cuando presionas la tecla "g" el navegador recibe el evento y la función de auto-completado del navegador entra en acción. 
 
-*In the case of the USB keyboard:*
+Dependiendo del algoritmo del navegador y si estás en una ventana de incógnito (también llamada Privada o InPrivate) o no, varias sugerencias te serán mostradas debajo de la barra de direcciones. La mayoría de estos algoritmos ordenan y priorizan los resultados basándose en el historial de búsqueda, marcadores, cookies, y consultas populares en todo Internet. 
 
-- The USB circuitry of the keyboard is powered by the 5V supply provided over
-  pin 1 from the computer's USB host controller.
-
-- The keycode generated is stored by internal keyboard circuitry memory in a
-  register called "endpoint".
-
-- The host USB controller polls that "endpoint" every ~10ms (minimum value
-  declared by the keyboard), so it gets the keycode value stored on it.
-
-- This value goes to the USB SIE (Serial Interface Engine) to be converted in
-  one or more USB packets that follow the low-level USB protocol.
-
-- Those packets are sent by a differential electrical signal over D+ and D-
-  pins (the middle 2) at a maximum speed of 1.5 Mb/s, as an HID
-  (Human Interface Device) device is always declared to be a "low-speed device"
-  (USB 2.0 compliance).
-
-- This serial signal is then decoded at the computer's host USB controller, and
-  interpreted by the computer's Human Interface Device (HID) universal keyboard
-  device driver.  The value of the key is then passed into the operating
-  system's hardware abstraction layer.
-
-*In the case of Virtual Keyboard (as in touch screen devices):*
-
-- When the user puts their finger on a modern capacitive touch screen, a
-  tiny amount of current gets transferred to the finger. This completes the
-  circuit through the electrostatic field of the conductive layer and
-  creates a voltage drop at that point on the screen. The
-  ``screen controller`` then raises an interrupt reporting the coordinate of
-  the keypress.
-
-- Then the mobile OS notifies the currently focused application of a press event
-  in one of its GUI elements (which now is the virtual keyboard application
-  buttons).
-
-- The virtual keyboard can now raise a software interrupt for sending a
-  'key pressed' message back to the OS.
-
-- This interrupt notifies the currently focused application of a 'key pressed'
-  event.
+Según continúas escribiendo "google.com" muchos bloques de código son ejecutados y las sugerencias serán mejoradas con cada tecla presionada. Incluso te acabará sugieriendo "google.com" antes de que termines de escribirlo. 
 
 
-Interrupt fires [NOT for USB keyboards]
----------------------------------------
+La tecla "enter" toca fondo
+-----------------------------
 
+Por elegir un punto de inicio, elijamos la tecla Enter del teclado tocando fondo. En este momento, un circuito específico para la tecla Enter, es cerrado (de forma directa, mecánica, o capacitiva). Esto permite que una pequeña cantidad de corriente fluya al circuito lógico del teclado, que escanea el estado del interruptor de la tecla, trata la señal recibida y la convierte a un código numérico. En este caso el número 13. 
+
+El controlador del teclado a continuación codifica el código numérico obtenido y lo envía al ordenador. Cómo lo envia es, a día de hoy, prácticamente universal. Ya esté conectado mediante Universal Serial Bus (USB) o Bluetooth. Otro gallo cantaba en época de las conexiones PS/2 y ADB.
+
+*En el caso de un teclado Bluetooth:*
+
+ - El circuito USB del teclado está encendido y funcionando gracias a los 5V de electricidad facilitados por el ordenador al que está conectado el USB, concretamente al pin número 1 del conector. 
+
+ - El código numérico generado es guardado por el circuito interno del teclado en un registro llamado "endpoint".
+
+ - El equipo al que está conectado el USB "pregunta" cada 10ms aproximadamente (valor mínimo declarado por el teclado), y de esta forma obtiene el código numérico guardado en el "endpoint".
+
+ - Este valor va hasta el SIE (Serial Interface Engine) del USB, que serán convertidos en uno o más paquetes USB que seguirán el protocolo de bajo nivel que gobierna la comunicación USB.
+
+ - Esos paquetes son enviados por una señal eléctrica diferencial a través de los pines D+ y D+ (los dos del centro del conector) a un máximo de 1.5Mb/s. Como dispositivo HID (*Human Digital Interface*, Interfaz Digital Humana) es siempre declarado como un "dispositivo de baja velocidad" (complimiento del protocolo USB 2.0).
+ 
+ - Esta señal en serie es después decodificado en el equipo USB al que está conectado el teclado, e interpretado por el driver *Human Interface Device* (HID) instalado en el equipo. El valor de la tecla es transmido a la capa de absracción hardware del sistema operativo. 
+
+*En el caso de teclados virtuales (como en dispositivos con pantallas táctiles):*
+
+ - Cuando el usuario pone sus dedos en una pantalla capacitiva moderna, una pequeña cantidad de corriente se transmite al dedo. Esto completa un cirtuto a través del campo electrostático de la capa conductiva y crea una caída de voltaje que crea una caída de voltaje en ese punto de la pantalla. El ``controlador de la pantalla`` genera una interrupción reportando las coordenadas de la pulsación. 
+ 
+ - El sistema operativo móvil notifica a la aplicación que en ese momento tiene el foco de la pulsación de uno de sus elementos GUI (que es en este momento son los botones del teclado virtual). 
+
+ - El teclado virtual puede ahora notificar el evento de "tecla pulsada" de vuelta al Sistema Operativo. 
+
+Lanzamiento de interrupciones [NO para teclados USB]
+-----------------------------------------------------
+
+El teclado envía señales a su *interrupt request line (IRQ)*, que es mapeada a un ``vector de interrupción`` (integral, *integer*) por el controlador de interrupciones. La CPU usa la ``Interrupt Descriptor Table`` (IDT) para 
+ 
 The keyboard sends signals on its interrupt request line (IRQ), which is mapped
 to an ``interrupt vector`` (integer) by the interrupt controller. The CPU uses
 the ``Interrupt Descriptor Table`` (IDT) to map the interrupt vectors to
@@ -689,6 +658,8 @@ the Google homepage. Scripts can cause additional network requests to be
 performed, as well as modify the page or its layout, causing another round of
 page rendering and painting.
 
+.. _`"What happens when..."`: https://github.com/alex/what-happens-when
+.. _`Alex Waynor`: https://github.com/alex
 .. _`Creative Commons Zero`: https://creativecommons.org/publicdomain/zero/1.0/
 .. _`"CSS lexical and syntax grammar"`: http://www.w3.org/TR/CSS2/grammar.html
 .. _`Punycode`: https://en.wikipedia.org/wiki/Punycode
