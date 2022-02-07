@@ -15,7 +15,7 @@ Este trabajo está licenciado bajo la licencia `Creative Commons Zero`_.
 
 También puedes leerlo en  `简体中文`_ (chino simplificado), `日本語`_ (japonés) y `한국어`_ (koreano). También, por supuesto, la versión original de `"What happens when..."`_ en inglés. 
 
-Table of Contents
+Tabla de contenidos
 ====================
 
 .. contents::
@@ -120,7 +120,7 @@ Convertir caracteres no ASCII en el nombre de dominio
 Comprobar la lista HSTS
 --------------------------
 * El navegador comprueba su lista HSTS (HTTP Strict Transport Security) precargada. Esta es una lista the sitios web que han solicitado que sean contactados únicamente mediante HTTPS. 
-* Si el sitio web está en la lista, el navegador envia su petición mediante HTTPS en vez de HTTP. De otro modo, la petición inicial será enviada por HTTP (esto puede depender también de las políticas y la configuración del propio navegador). Debemos tener en cuenta que los sitios web siguen pudiendo utiliza HSTS sin estar en estas listas. La primera petición enviada por el cliente es respondida con una respuesta solicitando que el cliente únicamente envíe peticiones HTTPS. Son embargo, esta única petición HTTP podría dejar al usuario vulnerable a los `downgrade attack`_, también llamados `ataques de degradación`_, que es el motivo por el cual las listas HSTS fueron añadidas a los navegadores web. Como ejemplo, esta es la `lista HSTS`_ precargada en Chrome. 
+* Si el sitio web está en la lista, el navegador envia su petición mediante HTTPS en vez de HTTP. De otro modo, la petición inicial será enviada por HTTP (esto puede depender también de las políticas y la configuración del propio navegador). Debemos tener en cuenta que los sitios web siguen pudiendo utiliza HSTS sin estar en estas listas. La primera petición enviada por el cliente es respondida con una respuesta solicitando que el cliente únicamente envíe peticiones HTTPS. Son embargo, esta única petición HTTP podría dejar al usuario vulnerable a los `downgrade attack`_, también llamados ataques de degradación, que es el motivo por el cual las listas HSTS fueron añadidas a los navegadores web. Como ejemplo, esta es la `lista HSTS`_ precargada en Chrome. 
 
 
 Búsqueda DNS
