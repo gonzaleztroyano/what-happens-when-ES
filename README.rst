@@ -13,7 +13,7 @@ Este es un proceso colaborativo, ¡así que investiga sobre la sección que más
 
 Este trabajo está licenciado bajo la licencia `Creative Commons Zero`_.
 
-También puedes leerlo en  `简体中文`_ (chino simplificado), `日本語`_ (japonés) y `한국어`_(koreano). También, por supuesto, la versión original de `"What happens when..."`_ en inglés. 
+También puedes leerlo en  `简体中文`_ (chino simplificado), `日本語`_ (japonés) y `한국어`_ (koreano). También, por supuesto, la versión original de `"What happens when..."`_ en inglés. 
 
 Table of Contents
 ====================
@@ -185,252 +185,158 @@ Ahora que la biblioteca de red tiene la dirección IP de nuestro servidor DNS o 
 * Si el cliente estuviera configurado para utilzar DNSoverHTTPS o DNSoverTLS, el destino del socket sería 53/TCP.
 * Si el servidor DNS local, o el de nuestro ISP, no dispone de la respuesta en su caché, entonces realiza una petición recursiva. Esta petición recursiva avanza hasta que se encuentra el SOA (``Start Of A uthority``) y devuelve la respuesta de este. 
 
-Opening of a socket
+Abrir un socket
 -------------------
-Once the browser receives the IP address of the destination server, it takes
-that and the given port number from the URL (the HTTP protocol defaults to port
-80, and HTTPS to port 443), and makes a call to the system library function
-named ``socket`` and requests a TCP socket stream - ``AF_INET/AF_INET6`` and
-``SOCK_STREAM``.
+Una vez que el navegador recibe la dirección IP del servidor de destino, la almacena, junto con el  número de puerto dado en la URL (el protocolo HTTP predeterminado es el puerto 80 y HTTPS el puerto 443). Realiza una llamada a la función de la biblioteca del sistema llamada ` `socket`` y solicita un flujo de socket TCP: ``AF_INET/AF_INET6`` y ``SOCK_STREAM``.
 
-* This request is first passed to the Transport Layer where a TCP segment is
-  crafted. The destination port is added to the header, and a source port is
-  chosen from within the kernel's dynamic port range (ip_local_port_range in
-  Linux).
-* This segment is sent to the Network Layer, which wraps an additional IP
-  header. The IP address of the destination server as well as that of the
-  current machine is inserted to form a packet.
-* The packet next arrives at the Link Layer. A frame header is added that
-  includes the MAC address of the machine's NIC as well as the MAC address of
-  the gateway (local router). As before, if the kernel does not know the MAC
-  address of the gateway, it must broadcast an ARP query to find it.
+* Esta solicitud se pasa primero a la capa de transporte donde se crea un segmento TCP. El puerto de destino se agrega al encabezado y se elige un puerto de origen dentro del rango de puertos dinámicos del kernel (ip_local_port_range en Linux).
 
-At this point the packet is ready to be transmitted through either:
+* Este segmento se envía a la capa de Red (Nivel 3 de OSI), que añade un encabezado IP adicional. La dirección IP del servidor de destino, así como la de la máquina actual, se insertan para formar un paquete.
+
+* El paquete llega después a la capa de Enlace (Nivel 2 de OSI). Se agrega un encabezado de "frame" que incluye la dirección MAC de la NIC de la máquina, así como la dirección MAC de la puerta de enlace (router local). Como antes, si el núcleo no conoce la dirección MAC de la puerta de enlace, debe transmitir una consulta ARP para encontrarla.
+
+En este momento, el paquete está listo para ser transferido por cualquier método físico:
 
 * `Ethernet`_
 * `WiFi`_
-* `Cellular data network`_
+* `Datos móviles`_
 
-For most home or small business Internet connections the packet will pass from
-your computer, possibly through a local network, and then through a modem
-(MOdulator/DEModulator) which converts digital 1's and 0's into an analog
-signal suitable for transmission over telephone, cable, or wireless telephony
-connections. On the other end of the connection is another modem which converts
-the analog signal back into digital data to be processed by the next `network
-node`_ where the from and to addresses would be analyzed further.
+Para la mayoría de las conexiones a Internet domésticas o de pequeñas empresas, el paquete pasará desde su equipo, posiblemente a través de una red local, y luego a través de un módem (MOdulator/DEModulator) que convierte los 1 y 0 digitales en una señal analógica adecuada para la transmisión por teléfono, cable, o conexiones de telefonía inalámbrica. En el otro extremo de la conexión hay otro módem que vuelve a convertir la señal analógica en datos digitales para ser procesados por el siguiente `nodo de la red`_ donde se analizarán más a fondo las direcciones de origen y destino.
 
-Most larger businesses and some newer residential connections will have fiber
-or direct Ethernet connections in which case the data remains digital and
-is passed directly to the next `network node`_ for processing.
+La mayoría de las empresas más grandes y algunas conexiones residenciales más nuevas tendrán conexiones de fibra o Ethernet directa, en cuyo caso los datos permanecen digitales y pasan directamente al siguiente `nodo de la red`_ para su procesamiento. En España, al menos en las áreas metropolitanas, es común la conexión mediante FTTH (Fiber to the home).
 
-Eventually, the packet will reach the router managing the local subnet. From
-there, it will continue to travel to the autonomous system's (AS) border
-routers, other ASes, and finally to the destination server. Each router along
-the way extracts the destination address from the IP header and routes it to
-the appropriate next hop. The time to live (TTL) field in the IP header is
-decremented by one for each router that passes. The packet will be dropped if
-the TTL field reaches zero or if the current router has no space in its queue
-(perhaps due to network congestion).
+En algún momento, el paquete llegará al router que administra la subred local. Desde allí, continuará viajando a los routers de borde del sistema autónomo (AS), otros AS y finalmente al servidor de destino. Cada enrutador en el camino extrae la dirección de destino del encabezado IP y la enruta al próximo salto apropiado. El campo de tiempo de vida (TTL) en el encabezado IP se reduce en uno por cada enrutador que pasa. El paquete se descartará si el campo TTL llega a cero o si el enrutador actual no tiene espacio en su cola (quizás debido a la congestión de la red).
 
-This send and receive happens multiple times following the TCP connection flow:
 
-* Client chooses an initial sequence number (ISN) and sends the packet to the
-  server with the SYN bit set to indicate it is setting the ISN
-* Server receives SYN and if it's in an agreeable mood:
-   * Server chooses its own initial sequence number
-   * Server sets SYN to indicate it is choosing its ISN
-   * Server copies the (client ISN +1) to its ACK field and adds the ACK flag
-     to indicate it is acknowledging receipt of the first packet
-* Client acknowledges the connection by sending a packet:
-   * Increases its own sequence number
-   * Increases the receiver acknowledgment number
-   * Sets ACK field
-* Data is transferred as follows:
-   * As one side sends N data bytes, it increases its SEQ by that number
-   * When the other side acknowledges receipt of that packet (or a string of
-     packets), it sends an ACK packet with the ACK value equal to the last
-     received sequence from the other
-* To close the connection:
-   * The closer sends a FIN packet
-   * The other sides ACKs the FIN packet and sends its own FIN
-   * The closer acknowledges the other side's FIN with an ACK
+Este "enviar y recibir" ocurre múltiples veces siguiendo el esquema de conexión TCP:
 
-TLS handshake
--------------
-* The client computer sends a ``ClientHello`` message to the server with its
-  Transport Layer Security (TLS) version, list of cipher algorithms and
-  compression methods available.
+* El cliente elige un número de secuencia inicial (ISN) y envía el paquete al servidor con el bit SYN establecido para indicar que está configurando el ISN.
+* El servidor recibe SYN y si puede atender la petición:
+   * El servidor elige su propio número de secuencia inicial.
+   * El servidor establece SYN para indicar que está eligiendo su ISN.
+   * El servidor copia el (cliente ISN + 1) en su campo ACK y agrega el indicador ACK para indicar que está acusando recibo del primer paquete.
+* El cliente reconoce la conexión enviando un paquete:
+   * Aumenta su propio número de secuencia.
+   * Aumenta el número de *acknowledgment* del receptor.
+   * Establece el campo ACK.
+* Los datos se transfieren de la siguiente manera:
+   * A medida que un lado envía N bytes de datos, aumenta su SEQ en ese número.
+   * Cuando el otro lado acusa recibo de ese paquete (o una cadena de paquetes), envía un paquete ACK con el valor ACK igual al último secuencia recibida del otro lado.
+* Para cerrar la conexión:
+   * El lado que desea cerrar la conexión envía un paquete FIN.
+   * El otro lado acepta ("ACK") el paquete FIN y envía su propio FIN.
+   * El lado que cierra la conexión reconoce el FIN del otro lado con un ACK.
 
-* The server replies with a ``ServerHello`` message to the client with the
-  TLS version, selected cipher, selected compression methods and the server's
-  public certificate signed by a CA (Certificate Authority). The certificate
-  contains a public key that will be used by the client to encrypt the rest of
-  the handshake until a symmetric key can be agreed upon.
-
-* The client verifies the server digital certificate against its list of
-  trusted CAs. If trust can be established based on the CA, the client
-  generates a string of pseudo-random bytes and encrypts this with the server's
-  public key. These random bytes can be used to determine the symmetric key.
-
-* The server decrypts the random bytes using its private key and uses these
-  bytes to generate its own copy of the symmetric master key.
-
-* The client sends a ``Finished`` message to the server, encrypting a hash of
-  the transmission up to this point with the symmetric key.
-
-* The server generates its own hash, and then decrypts the client-sent hash
-  to verify that it matches. If it does, it sends its own ``Finished`` message
-  to the client, also encrypted with the symmetric key.
-
-* From now on the TLS session transmits the application (HTTP) data encrypted
-  with the agreed symmetric key.
-
-If a packet is dropped
-----------------------
-
-Sometimes, due to network congestion or flaky hardware connections, TLS packets
-will be dropped before they get to their final destination. The sender then has
-to decide how to react. The algorithm for this is called `TCP congestion
-control`_. This varies depending on the sender; the most common algorithms are
-`cubic`_ on newer operating systems and `New Reno`_ on almost all others.
-
-* Client chooses a `congestion window`_ based on the `maximum segment size`_
-  (MSS) of the connection.
-* For each packet acknowledged, the window doubles in size until it reaches the
-  'slow-start threshold'. In some implementations, this threshold is adaptive.
-* After reaching the slow-start threshold, the window increases additively for
-  each packet acknowledged. If a packet is dropped, the window reduces
-  exponentially until another packet is acknowledged.
-
-HTTP protocol
+Handshake TLS
 -------------
 
-If the web browser used was written by Google, instead of sending an HTTP
-request to retrieve the page, it will send a request to try and negotiate with
-the server an "upgrade" from HTTP to the SPDY protocol.
+* La computadora cliente envía un mensaje ``ClientHello`` al servidor con su versión Transport Layer Security (TLS), lista de algoritmos de cifrado y métodos de compresión disponibles.
 
-If the client is using the HTTP protocol and does not support SPDY, it sends a
-request to the server of the form::
+* El servidor responde con un mensaje ``ServerHello`` al cliente con la versión de TLS, el cifrado seleccionado, los métodos de compresión seleccionados y el certificado público del servidor firmado por una CA (Autoridad de Certificación, *Certificate Authority*). El certificado contiene una clave pública que utilizará el cliente para cifrar el resto del protocolo de enlace hasta que se pueda acordar una clave simétrica.
+
+* El cliente verifica el certificado digital del servidor con su lista de CA de confianza. Si se puede establecer la confianza en función de la CA, el cliente genera una cadena de bytes pseudoaleatorios y la cifra con la clave pública del servidor. Estos bytes aleatorios se pueden utilizar para determinar la clave simétrica.
+
+* El servidor descifra los bytes aleatorios utilizando su clave privada y utiliza estos bytes para generar su propia copia de la clave maestra simétrica.
+
+* El cliente envía un mensaje ``Finished`` al servidor, encriptando un hash de la transmisión hasta este punto con la clave simétrica.
+
+* El servidor genera su propio hash y luego descifra el hash enviado por el cliente para verificar que coincida. Si lo hace, envía su propio mensaje ``Finished`` al cliente, también encriptado con la clave simétrica.
+
+* A partir de ese momento, la sesión TLS transmite los datos de la aplicación (HTTP) encriptados con la clave simétrica acordada.
+
+Si un paquete se pierde
+------------------------
+
+A veces, debido a la congestión de la red o conexiones de hardware inestables, los paquetes TLS se descartarán antes de que lleguen a su destino final. El remitente entonces tiene que decidir cómo reaccionar. El algoritmo para esto se llama `control de congestión TCP`_. Esto varía según el remitente; los algoritmos más comunes son `cubic`_ en los sistemas operativos más nuevos y `New Reno`_ en casi todos los demás.
+
+* El cliente elige una `congestion window`_ ("ventana de congestión", en castellano) basada en el `maximum segment size`_ (MSS, tamaño máximo del segmento) de la conexión.
+
+* Por cada paquete reconocido, la ventana se duplica en tamaño hasta que alcanza el 'umbral de inicio lento', *slow-start threshold*. En algunas implementaciones, este umbral es adaptativo.
+
+* Después de alcanzar el umbral de inicio lento, la ventana aumenta de manera adicional para cada paquete reconocido. Si se descarta un paquete, la ventana se reduce exponencialmente hasta que se reconoce otro paquete.
+
+Protocolo HTTP
+---------------
+
+Si el navegador que está utilizando fue escrito por Google, en lugar de enviar una solicitud HTTP para recuperar la página, enviará una solicitud para intentar negociar con el servidor una "actualización" de HTTP al protocolo SPDY.
+
+Si el cliente está utilizando el protocolo HTTP y no es compatible con SPDY, envía una solicitud al servidor de la forma (esto ocurrirá en la mayoría de los casos, pues es el estandar)::
 
     GET / HTTP/1.1
     Host: google.com
     Connection: close
-    [other headers]
+    [otras cabeceras]
 
-where ``[other headers]`` refers to a series of colon-separated key-value pairs
-formatted as per the HTTP specification and separated by single newlines.
-(This assumes the web browser being used doesn't have any bugs violating the
-HTTP spec. This also assumes that the web browser is using ``HTTP/1.1``,
-otherwise it may not include the ``Host`` header in the request and the version
-specified in the ``GET`` request will either be ``HTTP/1.0`` or ``HTTP/0.9``.)
+Donde ``[otras cabeceras]`` se refiere a una serie de pares clave-valor separadas por dos puntos, ":", formateadas siguiendo el estándar HTTP y separadas por retornos de carro, también llamados saltos de línea. 
+(Esto asume que el navegador web que se está utilizando no tiene ningún error que infrinja la especificación HTTP. Esto también supone que el navegador web está utilizando ``HTTP/1.1``; de lo contrario, es posible que no incluya el encabezado ``Host`` en el y la versión especificada en la solicitud ``GET`` será ``HTTP/1.0`` o ``HTTP/0.9``.)
 
-HTTP/1.1 defines the "close" connection option for the sender to signal that
-the connection will be closed after completion of the response. For example,
+HTTP/1.1 define la opción de conexión "cerrada" para que el remitente señale que la conexión se cerrará después de completar la respuesta. Por ejemplo,
 
     Connection: close
 
-HTTP/1.1 applications that do not support persistent connections MUST include
-the "close" connection option in every message.
+Las aplicaciones HTTP/1.1 que no admiten conexiones persistentes DEBEN incluir la opción de conexión "close" en cada mensaje.
 
-After sending the request and headers, the web browser sends a single blank
-newline to the server indicating that the content of the request is done.
+Después de enviar la solicitud y las cabeceras, el navegador web envía una nueva línea en blanco al servidor para indicar que el contenido de la solicitud está listo.
 
-The server responds with a response code denoting the status of the request and
-responds with a response of the form::
+El servidor responde con un código de respuesta que indica el estado de la solicitud y responde con una respuesta de la forma::
 
     200 OK
-    [response headers]
+    [cabeceras de respuesta]
 
-Followed by a single newline, and then sends a payload of the HTML content of
-``www.google.com``. The server may then either close the connection, or if
-headers sent by the client requested it, keep the connection open to be reused
-for further requests.
+Seguido de un solo salto de línea, envía un *payload* del contenido HTML de ``www.google.com``. Luego, el servidor puede cerrar la conexión o, si los encabezados enviados por el cliente lo solicitaron, mantener la conexión abierta para reutilizarla para futuras solicitudes.
 
-If the HTTP headers sent by the web browser included sufficient information for
-the webserver to determine if the version of the file cached by the web
-browser has been unmodified since the last retrieval (ie. if the web browser
-included an ``ETag`` header), it may instead respond with a request of
-the form::
+Si los encabezados HTTP enviados por el navegador web incluían información suficiente para que el servidor web determinara si la versión del archivo almacenado en caché por el navegador web no se ha modificado desde la última recuperación (es decir, si el navegador web incluía un encabezado ``ETag`` ), en su lugar, puede responder con una solicitud de la forma:
 
     304 Not Modified
-    [response headers]
+    [cabeceras de respuesta]
 
-and no payload, and the web browser instead retrieve the HTML from its cache.
+sin ningún contenido adicional, y el navegador web en su lugar recupera el HTML de su caché.
 
-After parsing the HTML, the web browser (and server) repeats this process
-for every resource (image, CSS, favicon.ico, etc) referenced by the HTML page,
-except instead of ``GET / HTTP/1.1`` the request will be
-``GET /$(URL relative to www.google.com) HTTP/1.1``.
+Después de analizar el HTML, el navegador web (y el servidor) repite este proceso para cada recurso (imagen, CSS, favicon.ico, etc.) al que hace referencia la página HTML, excepto que en lugar de ``GET / HTTP/1.1``, la solicitud será ser ``GET /$(URL relativa a www.google.com) HTTP/1.1``.
 
-If the HTML referenced a resource on a different domain than
-``www.google.com``, the web browser goes back to the steps involved in
-resolving the other domain, and follows all steps up to this point for that
-domain. The ``Host`` header in the request will be set to the appropriate
-server name instead of ``google.com``.
+Si el HTML hace referencia a un recurso en un dominio diferente a ``www.google.com``, el navegador web vuelve a los pasos involucrados en la resolución del otro dominio y sigue todos los pasos hasta este punto para ese dominio. El encabezado ``Host`` en la solicitud se configurará con el nombre de servidor apropiado en lugar de ``google.com``.
 
-HTTP Server Request Handle
---------------------------
-The HTTPD (HTTP Daemon) server is the one handling the requests/responses on
-the server-side. The most common HTTPD servers are Apache or nginx for Linux
-and IIS for Windows.
+Manejo de peticiones HTTP en servidor
+--------------------------------------
 
-* The HTTPD (HTTP Daemon) receives the request.
-* The server breaks down the request to the following parameters:
-   * HTTP Request Method (either ``GET``, ``HEAD``, ``POST``, ``PUT``,
-     ``PATCH``, ``DELETE``, ``CONNECT``, ``OPTIONS``, or ``TRACE``). In the
-     case of a URL entered directly into the address bar, this will be ``GET``.
-   * Domain, in this case - google.com.
-   * Requested path/page, in this case - / (as no specific path/page was
-     requested, / is the default path).
-* The server verifies that there is a Virtual Host configured on the server
-  that corresponds with google.com.
-* The server verifies that google.com can accept GET requests.
-* The server verifies that the client is allowed to use this method
-  (by IP, authentication, etc.).
-* If the server has a rewrite module installed (like mod_rewrite for Apache or
-  URL Rewrite for IIS), it tries to match the request against one of the
-  configured rules. If a matching rule is found, the server uses that rule to
-  rewrite the request.
-* The server goes to pull the content that corresponds with the request,
-  in our case it will fall back to the index file, as "/" is the main file
-  (some cases can override this, but this is the most common method).
-* The server parses the file according to the handler. If Google
-  is running on PHP, the server uses PHP to interpret the index file, and
-  streams the output to the client.
+El servidor HTTPD (HTTP Daemon) es el que maneja las solicitudes/respuestas en el lado del servidor. Los servidores HTTPD más comunes son Apache o nginx para Linux e IIS para Windows.
 
-Behind the scenes of the Browser
-----------------------------------
+* El servidor HTTP recibe la petición.
+* El servidor desglosa la solicitud en los siguientes parámetros:
+   * Método de petición HTTP (que puede ser ``GET``, ``HEAD``, ``POST``, ``PUT``,
+     ``PATCH``, ``DELETE``, ``CONNECT``, ``OPTIONS``, o ``TRACE``). En el caso de una URL ingresada directamente en la barra de direcciones, el método será ``GET``.
+   * Dominio, en este caso google.com.
+   * Página o ruta solicitada.  En este caso,  */* (puesto que no se solicitó una ruta/página específica, / es la ruta por defecto).
+* El servidor verifica que haya un host virtual configurado en el servidor que se corresponda con google.com.
+* El servidor verifica que google.com puede aceptar solicitudes GET.
+* El servidor verifica que el cliente tiene permiso para usar este método (por IP, autenticación, etc.).
+* Si el servidor tiene instalado un módulo de reescritura (como *mod_rewrite* para Apache o *URL Rewrite* para IIS), intenta hacer coincidir la solicitud con una de las reglas configuradas. Si se encuentra una regla coincidente, el servidor usa esa regla para reescribir la solicitud.
+* El servidor extrae el contenido que corresponde con la solicitud, en nuestro caso, recurrirá al archivo de índice, ya que "/" es el archivo principal (algunos casos pueden anular esto, pero este es el método más común).
+* El servidor analiza el archivo según el controlador. Si Google se ejecuta en PHP, el servidor usa PHP para interpretar el archivo de índice y transmite la salida al cliente.
 
-Once the server supplies the resources (HTML, CSS, JS, images, etc.)
-to the browser it undergoes the below process:
+El trabajo del navegador
+-------------------------
 
-* Parsing - HTML, CSS, JS
-* Rendering - Construct DOM Tree → Render Tree → Layout of Render Tree →
-  Painting the render tree
+Una vez que el servidor proporciona los recursos (HTML, CSS, JS, imágenes, etc.) al navegador, se inicia el siguiente proceso:
 
-Browser
--------
+* Parseado - HTML, CSS, JS
+* Renderizado - Construir árbol DOM → Árbol de renderizado → Diseño del árbol de renderizado → Pintar el árbol de renderizado
 
-The browser's functionality is to present the web resource you choose, by
-requesting it from the server and displaying it in the browser window.
-The resource is usually an HTML document, but may also be a PDF,
-image, or some other type of content. The location of the resource is
-specified by the user using a URI (Uniform Resource Identifier).
+Navegador
+-----------
 
-The way the browser interprets and displays HTML files is specified
-in the HTML and CSS specifications. These specifications are maintained
-by the W3C (World Wide Web Consortium) organization, which is the
-standards organization for the web.
+La funcionalidad del navegador es presentar el recurso web que elija, solicitándolo al servidor y mostrándolo en la ventana del navegador. El recurso suele ser un documento HTML, pero también puede ser un PDF, una imagen o algún otro tipo de contenido. El usuario especifica la ubicación del recurso mediante un URI (identificador uniforme de recursos).
 
-Browser user interfaces have a lot in common with each other. Among the
-common user interface elements are:
+La forma en que el navegador interpreta y muestra los archivos HTML se recoge en las especificaciones de HTML y CSS. Estas especificaciones son mantenidas por la organización W3C (World Wide Web Consortium), que es la organización de estándares para la web.
 
-* An address bar for inserting a URI
-* Back and forward buttons
-* Bookmarking options
-* Refresh and stop buttons for refreshing or stopping the loading of
-  current documents
-* Home button that takes you to your home page
+Las interfaces de usuario del navegador tienen mucho en común entre sí.
+Los elementos comunes de la interfaz de usuario son:
+
+* Una barra de direcciones para insertar un URI
+* Botones de avance y retroceso
+* Opciones de marcadores
+* Botones Actualizar y Detener para actualizar o detener la carga de documentos actuales
+* Botón de inicio que te lleva a tu página de inicio
 
 **Browser High-Level Structure**
 
@@ -584,10 +490,10 @@ page rendering and painting.
 .. _`Punycode`: https://en.wikipedia.org/wiki/Punycode
 .. _`Ethernet`: http://en.wikipedia.org/wiki/IEEE_802.3
 .. _`WiFi`: https://en.wikipedia.org/wiki/IEEE_802.11
-.. _`Cellular data network`: https://en.wikipedia.org/wiki/Cellular_data_communication_protocol
+.. _`Datos móviles`: https://en.wikipedia.org/wiki/Cellular_data_communication_protocol
 .. _`analog-to-digital converter`: https://en.wikipedia.org/wiki/Analog-to-digital_converter
-.. _`network node`: https://en.wikipedia.org/wiki/Computer_network#Network_nodes
-.. _`TCP congestion control`: https://en.wikipedia.org/wiki/TCP_congestion_control
+.. _`nodo de la red`: https://en.wikipedia.org/wiki/Computer_network#Network_nodes
+.. _`control de congestión TCP`: https://en.wikipedia.org/wiki/TCP_congestion_control
 .. _`cubic`: https://en.wikipedia.org/wiki/CUBIC_TCP
 .. _`New Reno`: https://en.wikipedia.org/wiki/TCP_congestion_control#TCP_New_Reno
 .. _`congestion window`: https://en.wikipedia.org/wiki/TCP_congestion_control#Congestion_window
