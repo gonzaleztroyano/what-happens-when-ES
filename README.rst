@@ -43,228 +43,147 @@ El controlador del teclado a continuación codifica el código numérico obtenid
 
 *En el caso de un teclado Bluetooth:*
 
- - El circuito USB del teclado está encendido y funcionando gracias a los 5V de electricidad facilitados por el ordenador al que está conectado el USB, concretamente al pin número 1 del conector. 
+- El circuito USB del teclado está encendido y funcionando gracias a los 5V de electricidad facilitados por el ordenador al que está conectado el USB, concretamente al pin número 1 del conector. 
 
- - El código numérico generado es guardado por el circuito interno del teclado en un registro llamado "endpoint".
+- El código numérico generado es guardado por el circuito interno del teclado en un registro llamado "endpoint".
 
- - El equipo al que está conectado el USB "pregunta" cada 10ms aproximadamente (valor mínimo declarado por el teclado), y de esta forma obtiene el código numérico guardado en el "endpoint".
+- El equipo al que está conectado el USB "pregunta" cada 10ms aproximadamente (valor mínimo declarado por el teclado), y de esta forma obtiene el código numérico guardado en el "endpoint".
 
- - Este valor va hasta el SIE (Serial Interface Engine) del USB, que serán convertidos en uno o más paquetes USB que seguirán el protocolo de bajo nivel que gobierna la comunicación USB.
+- Este valor va hasta el SIE (Serial Interface Engine) del USB, que serán convertidos en uno o más paquetes USB que seguirán el protocolo de bajo nivel que gobierna la comunicación USB.
 
- - Esos paquetes son enviados por una señal eléctrica diferencial a través de los pines D+ y D+ (los dos del centro del conector) a un máximo de 1.5Mb/s. Como dispositivo HID (*Human Digital Interface*, Interfaz Digital Humana) es siempre declarado como un "dispositivo de baja velocidad" (complimiento del protocolo USB 2.0).
- 
- - Esta señal en serie es después decodificado en el equipo USB al que está conectado el teclado, e interpretado por el driver *Human Interface Device* (HID) instalado en el equipo. El valor de la tecla es transmido a la capa de absracción hardware del sistema operativo. 
+- Esos paquetes son enviados por una señal eléctrica diferencial a través de los pines D+ y D+ (los dos del centro del conector) a un máximo de 1.5Mb/s. Como dispositivo HID (*Human Digital Interface*, Interfaz Digital Humana) es siempre declarado como un "dispositivo de baja velocidad" (complimiento del protocolo USB 2.0).
+
+- Esta señal en serie es después decodificado en el equipo USB al que está conectado el teclado, e interpretado por el driver *Human Interface Device* (HID) instalado en el equipo. El valor de la tecla es transmido a la capa de absracción hardware del sistema operativo. 
 
 *En el caso de teclados virtuales (como en dispositivos con pantallas táctiles):*
 
- - Cuando el usuario pone sus dedos en una pantalla capacitiva moderna, una pequeña cantidad de corriente se transmite al dedo. Esto completa un cirtuto a través del campo electrostático de la capa conductiva y crea una caída de voltaje que crea una caída de voltaje en ese punto de la pantalla. El ``controlador de la pantalla`` genera una interrupción reportando las coordenadas de la pulsación. 
- 
- - El sistema operativo móvil notifica a la aplicación que en ese momento tiene el foco de la pulsación de uno de sus elementos GUI (que es en este momento son los botones del teclado virtual). 
+- Cuando el usuario pone sus dedos en una pantalla capacitiva moderna, una pequeña cantidad de corriente se transmite al dedo. Esto completa un cirtuto a través del campo electrostático de la capa conductiva y crea una caída de voltaje que crea una caída de voltaje en ese punto de la pantalla. El ``controlador de la pantalla`` genera una interrupción reportando las coordenadas de la pulsación. 
 
- - El teclado virtual puede ahora notificar el evento de "tecla pulsada" de vuelta al Sistema Operativo. 
+- El sistema operativo móvil notifica a la aplicación que en ese momento tiene el foco de la pulsación de uno de sus elementos GUI (que es en este momento son los botones del teclado virtual). 
+
+- El teclado virtual puede ahora notificar el evento de "tecla pulsada" de vuelta al Sistema Operativo. 
 
 Lanzamiento de interrupciones [NO para teclados USB]
 -----------------------------------------------------
 
-El teclado envía señales a su *interrupt request line (IRQ)*, que es mapeada a un ``vector de interrupción`` (integral, *integer*) por el controlador de interrupciones. La CPU usa la ``Interrupt Descriptor Table`` (IDT) para 
+El teclado envía señales a su *interrupt request line (IRQ)*, que es mapeada a un ``vector de interrupción`` (integral, *integer*) por el controlador de interrupciones. La CPU usa la ``Interrupt Descriptor Table`` (IDT) para mapear el vector de interrupción hacia las funciones (``manejadores de interrupciones``) que son proporcionados por el kernel. Cuando una interrupción es generada, la CPU busca en la IDT el vector de interrupción y ejecuta el manejador apropiado. Por lo tanto, se ingresa al kernel.
  
-The keyboard sends signals on its interrupt request line (IRQ), which is mapped
-to an ``interrupt vector`` (integer) by the interrupt controller. The CPU uses
-the ``Interrupt Descriptor Table`` (IDT) to map the interrupt vectors to
-functions (``interrupt handlers``) which are supplied by the kernel. When an
-interrupt arrives, the CPU indexes the IDT with the interrupt vector and runs
-the appropriate handler. Thus, the kernel is entered.
 
-(On Windows) A ``WM_KEYDOWN`` message is sent to the app
---------------------------------------------------------
+(En Windows) El mensaje ``WM_KEYDOWN`` es enviado a la aplicación
+-------------------------------------------------------------------
 
-The HID transport passes the key down event to the ``KBDHID.sys`` driver which
-converts the HID usage into a scancode. In this case, the scan code is
-``VK_RETURN`` (``0x0D``). The ``KBDHID.sys`` driver interfaces with the
-``KBDCLASS.sys`` (keyboard class driver). This driver is responsible for
-handling all keyboard and keypad input in a secure manner. It then calls into
-``Win32K.sys`` (after potentially passing the message through 3rd party
-keyboard filters that are installed). This all happens in kernel mode.
+El transporte de HID pasa el evento de tecla pulsada al controlador ``KBDHID.sys`` que convierte el uso de HID en un código de escaneo. En este caso, el código de escaneo es ``VK_RETURN`` (``0x0D``). El controlador ``KBDHID.sys`` interactúa con ``KBDCLASS.sys`` (controlador de clase de teclado). Este controlador es responsable de gestionar todas las entradas del teclado y del teclado numérico de manera segura. Luego llama a ``Win32K.sys`` (después de potencialmente pasar el mensaje a través de filtros de teclado de terceros que están instalados). Todo esto sucede en modo kernel.
 
-``Win32K.sys`` figures out what window is the active window through the
-``GetForegroundWindow()`` API. This API provides the window handle of the
-browser's address box. The main Windows "message pump" then calls
-``SendMessage(hWnd, WM_KEYDOWN, VK_RETURN, lParam)``. ``lParam`` is a bitmask
-that indicates further information about the keypress: repeat count (0 in this
-case), the actual scan code (can be OEM dependent, but generally wouldn't be
-for ``VK_RETURN``), whether extended keys (e.g. alt, shift, ctrl) were also
-pressed (they weren't), and some other state.
+``Win32K.sys`` determina qué ventana es la ventana activa a través de la API ``GetForegroundWindow()``. Esta API proporciona el identificador de ventana del cuadro de dirección del navegador. La "message pump" principal de Windows luego llama ``SendMessage(hWnd, WM_KEYDOWN, VK_RETURN, lParam)``. ``lParam`` es una máscara de bits que indica más información sobre la pulsación de tecla: número de repeticiones (0 en este caso), el código de escaneo real (puede depender del OEM, pero generalmente no sería para ``VK_RETURN``), si teclas extendidas (por ejemplo, alt, shift, ctrl) también fueron presionadas (no lo fueron), y algún otro estado.
 
-The Windows ``SendMessage`` API is a straightforward function that
-adds the message to a queue for the particular window handle (``hWnd``).
-Later, the main message processing function (called a ``WindowProc``) assigned
-to the ``hWnd`` is called in order to process each message in the queue.
+La API ``SendMessage`` de Windows es una función sencilla que agrega el mensaje a una cola para el identificador de ventana en particular (``hWnd``). Más tarde, se llama a la función principal de procesamiento de mensajes (llamada ``WindowProc``) asignada a ``hWnd`` para procesar cada mensaje en la cola.
 
-The window (``hWnd``) that is active is actually an edit control and the
-``WindowProc`` in this case has a message handler for ``WM_KEYDOWN`` messages.
-This code looks within the 3rd parameter that was passed to ``SendMessage``
-(``wParam``) and, because it is ``VK_RETURN`` knows the user has hit the ENTER
-key.
+La ventana (``hWnd``) que está activa es en realidad un control de edición y ``WindowProc`` en este caso tiene un controlador de mensajes para mensajes ``WM_KEYDOWN``. Este código busca dentro del tercer parámetro que se pasó a ``SendMessage`` (``wParam``) y, debido a que es ``VK_RETURN``, sabe que el usuario ha presionado la tecla ENTER.
 
-(On OS X) A ``KeyDown`` NSEvent is sent to the app
---------------------------------------------------
+(En OS X) El NSEvent ``KeyDown`` NSEvent es enviado a la apliacación
+----------------------------------------------------------------------
 
-The interrupt signal triggers an interrupt event in the I/O Kit kext keyboard
-driver. The driver translates the signal into a key code which is passed to the
-OS X ``WindowServer`` process. Resultantly, the ``WindowServer`` dispatches an
-event to any appropriate (e.g. active or listening) applications through their
-Mach port where it is placed into an event queue. Events can then be read from
-this queue by threads with sufficient privileges calling the
-``mach_ipc_dispatch`` function. This most commonly occurs through, and is
-handled by, an ``NSApplication`` main event loop, via an ``NSEvent`` of
-``NSEventType`` ``KeyDown``.
+La señal de interrupción desencadena un evento de interrupción en el controlador de teclado I/O Kit kext. El controlador traduce la señal en un código clave que se pasa al proceso ``WindowServer`` de OS X. Como resultado, ``WindowServer`` envía un evento a cualquier aplicación adecuada (por ejemplo, activa o escuchando) a través de su puerto Mach, donde se coloca en una cola de eventos. Los eventos pueden ser leídos desde esta cola por subprocesos con suficientes privilegios llamando a la función ``mach_ipc_dispatch``. Esto ocurre más comúnmente a través de un bucle de eventos principal ``NSApplication`` y es manejado por ``NSApplication``, a través de ``NSEvent`` de ``NSEventType`` ``KeyDown``.
 
-(On GNU/Linux) the Xorg server listens for keycodes
----------------------------------------------------
+(En GNU/Linux) El servdor Xorg en escucha de "keycodes"
+-------------------------------------------------------
 
-When a graphical ``X server`` is used, ``X`` will use the generic event
-driver ``evdev`` to acquire the keypress. A re-mapping of keycodes to scancodes
-is made with ``X server`` specific keymaps and rules.
-When the scancode mapping of the key pressed is complete, the ``X server``
-sends the character to the ``window manager`` (DWM, metacity, i3, etc), so the
-``window manager`` in turn sends the character to the focused window.
-The graphical API of the window  that receives the character prints the
-appropriate font symbol in the appropriate focused field.
+Cuando se utiliza un ``servidor X`` gráfico, ``X`` utilizará el controlador de eventos genérico ``evdev`` para adquirir la pulsación de tecla. Se realiza una reasignación de códigos clave a códigos de escaneo con reglas y mapas de teclas específicos del ``servidor X``.
 
-Parse URL
----------
-
-* The browser now has the following information contained in the URL (Uniform
-  Resource Locator):
-
-    - ``Protocol``  "http"
-        Use 'Hyper Text Transfer Protocol'
-
-    - ``Resource``  "/"
-        Retrieve main (index) page
+Cuando se completa la asignación del código de escaneo de la tecla presionada, el ``X Server`` envía el carácter al ``administrador de ventanas`` (DWM, metacity, i3, etc.), por lo que el ``administrador de ventanas`` a su vez envía el carácter a la ventana enfocada. La API gráfica de la ventana que recibe el carácter imprime el símbolo de fuente apropiado en el campo enfocado apropiado.
 
 
-Is it a URL or a search term?
------------------------------
-
-When no protocol or valid domain name is given the browser proceeds to feed
-the text given in the address box to the browser's default web search engine.
-In many cases the URL has a special piece of text appended to it to tell the
-search engine that it came from a particular browser's URL bar.
-
-Convert non-ASCII Unicode characters in the hostname
-------------------------------------------------
-
-* The browser checks the hostname for characters that are not in ``a-z``,
-  ``A-Z``, ``0-9``, ``-``, or ``.``.
-* Since the hostname is ``google.com`` there won't be any, but if there were
-  the browser would apply `Punycode`_ encoding to the hostname portion of the
-  URL.
-
-Check HSTS list
+Parsear la URL
 ---------------
-* The browser checks its "preloaded HSTS (HTTP Strict Transport Security)"
-  list. This is a list of websites that have requested to be contacted via
-  HTTPS only.
-* If the website is in the list, the browser sends its request via HTTPS
-  instead of HTTP. Otherwise, the initial request is sent via HTTP.
-  (Note that a website can still use the HSTS policy *without* being in the
-  HSTS list.  The first HTTP request to the website by a user will receive a
-  response requesting that the user only send HTTPS requests.  However, this
-  single HTTP request could potentially leave the user vulnerable to a
-  `downgrade attack`_, which is why the HSTS list is included in modern web
-  browsers.)
 
-DNS lookup
-----------
+* El navegador tiene en este momento la siguiente información contenida en la URL (Uniform Resource Locator, *Localizador de recursos uniforme*):
 
-* Browser checks if the domain is in its cache. (to see the DNS Cache in
-  Chrome, go to `chrome://net-internals/#dns <chrome://net-internals/#dns>`_).
-* If not found, the browser calls ``gethostbyname`` library function (varies by
-  OS) to do the lookup.
-* ``gethostbyname`` checks if the hostname can be resolved by reference in the
-  local ``hosts`` file (whose location `varies by OS`_) before trying to
-  resolve the hostname through DNS.
-* If ``gethostbyname`` does not have it cached nor can find it in the ``hosts``
-  file then it makes a request to the DNS server configured in the network
-  stack. This is typically the local router or the ISP's caching DNS server.
-* If the DNS server is on the same subnet the network library follows the
-  ``ARP process`` below for the DNS server.
-* If the DNS server is on a different subnet, the network library follows
-  the ``ARP process`` below for the default gateway IP.
+    - ``Protocolo``  "http"
+        Usa 'Hyper Text Transfer Protocol', HTTP
+
+    - ``Recurso``  "/"
+        Recupera la página principal (index)
 
 
-ARP process
------------
+¿Es una URL o un término de búsqueda?
+-------------------------------------
 
-In order to send an ARP (Address Resolution Protocol) broadcast the network
-stack library needs the target IP address to lookup. It also needs to know the
-MAC address of the interface it will use to send out the ARP broadcast.
+Cuando no se ha introducido en el navegador un protocolo o dominio (DNS) válido, este le pasa el término al buscador web predeterminado. En muchos casos, la URL tendrá un texto especial en ella para decirle al motor de búsqueda para informarle desde qué navegador es realizada la consulta.
 
-The ARP cache is first checked for an ARP entry for our target IP. If it is in
-the cache, the library function returns the result: Target IP = MAC.
+Convertir caracteres no ASCII en el nombre de dominio
+-------------------------------------------------------
 
-If the entry is not in the ARP cache:
+* El navegador comprueba el nombre de dominio en busca de caracteres que no son ``a-z``,
+  ``A-Z``, ``0-9``, ``-``, o ``.``.
+* Puesto que el nombre de dominio es ``google.com`` no habrá caracteres especiales fuera de los arriba indicados. Si los hubiera, el navegador aplicaría la codificación `Punycode`_ a la parte del dominio de la URL.
 
-* The route table is looked up, to see if the Target IP address is on any of
-  the subnets on the local route table. If it is, the library uses the
-  interface associated with that subnet. If it is not, the library uses the
-  interface that has the subnet of our default gateway.
+Comprobar la lista HSTS
+--------------------------
+* El navegador comprueba su lista HSTS (HTTP Strict Transport Security) precargada. Esta es una lista the sitios web que han solicitado que sean contactados únicamente mediante HTTPS. 
+* Si el sitio web está en la lista, el navegador envia su petición mediante HTTPS en vez de HTTP. De otro modo, la petición inicial será enviada por HTTP (esto puede depender también de las políticas y la configuración del propio navegador). Debemos tener en cuenta que los sitios web siguen pudiendo utiliza HSTS sin estar en estas listas. La primera petición enviada por el cliente es respondida con una respuesta solicitando que el cliente únicamente envíe peticiones HTTPS. Son embargo, esta única petición HTTP podría dejar al usuario vulnerable a los `downgrade attack`_, también llamados `ataques de degradación`_, que es el motivo por el cual las listas HSTS fueron añadidas a los navegadores web. Como ejemplo, esta es la `lista HSTS`_ precargada en Chrome. 
 
-* The MAC address of the selected network interface is looked up.
 
-* The network library sends a Layer 2 (data link layer of the `OSI model`_)
-  ARP request:
+Búsqueda DNS
+------------
 
-``ARP Request``::
+* El navegador comprueba si el dominio está en su caché. (Para ver el caché DNS en Chrome, podemos acceder a `chrome://net-internals/#dns <chrome://net-internals/#dns>`_).
+* Si no es encontrado, el navegador llama a la función ``gethostbyname`` (varía según el sistema operativo) para hacer la búsqueda DNS.
+* ``gethostbyname`` comprueba si el nombre de dominio puede ser resuelto buscando en el archivo ``hosts`` local (cuya localización `puede variar por OS`_) antes de intentar su resolución mediante DNS.
+* Si ``gethostbyname`` no tiene la respuesta en caché o no la ha podido encontrar en el archivo ``hosts``, realiza una petición al servidor DNS configurado en los ajustes de red. Normalmente, es el *router* de nuestro operador o su servidor de cacheo DNS.
+* Si el servidor DNS está en la misma subred, la librería de red sigue ``Proceso ARP`` a continuación indicado para encontrar el servidor DNS.
+* Si el servidor DNS se encuentra en una subred diferente, la librería de red sigue el ``Proceso ARP`` debajo indicado para encontrar la puerta de enlace hacia esa red (que normalmente será la puerta de enlace por defecto).
 
-    Sender MAC: interface:mac:address:here
-    Sender IP: interface.ip.goes.here
-    Target MAC: FF:FF:FF:FF:FF:FF (Broadcast)
-    Target IP: target.ip.goes.here
+Proceso ARP
+------------
 
-Depending on what type of hardware is between the computer and the router:
+Para enviar una solicitud ARP (Address Resolution Protocol) de broadcast, la librería de red necesita conocer la dirección IP a buscar. También necsita conocer la dirección MAC de la interfaz por la que va a enviar la solicitud ARP. 
 
-Directly connected:
+El caché ARP es primeramente comprobado en busca de una entrada ARP para la dirección IP objetivo. Si se encuentra en la caché, devuelve el resultado: IP objetico = Dirección MAC.
 
-* If the computer is directly connected to the router the router response
-  with an ``ARP Reply`` (see below)
+Si la entrada no se encuentra en la caché ARP:
+
+* Se busca en la tabla de enrutado para ver si la dirección IP objetivo está en alguna de las subredes en la tabla de enrutado local (esto significa que el dispositivo está directamente conectado a estas redes). Si lo está, la librería utiliza la interfaz asociada con esa subred. Si no está, la librería usa la interfaz asociada a la puerta de enlace por defecto configurada en el equipo.
+* La dirección MAC de la interfaz de red de la subred seleccionada es buscada.
+
+* La librería de red enbía una solicitud ARP de capa 2 (capa de enlace de datos en el `modelo OSI`_):
+
+``Solicitud ARP``::
+
+    MAC Origen : dirección:MAC:origen:aquí
+    IP Origen  : direccion.ip.origen.aquí
+    MAC Destino: FF:FF:FF:FF:FF:FF (Broadcast)
+    IP Destino : direccion.ip.destino.aquí
+
+Dependiendo qué dispositivos se encuentren entre el equipo y el router:
+
+Directamente conectado:
+
+* Si el equipo está conectado directamente al router, el router responde con una ``ARP Reply``, una respuesta ARP (ver a continación).
 
 Hub:
 
-* If the computer is connected to a hub, the hub will broadcast the ARP
-  request out of all other ports. If the router is connected on the same "wire",
-  it will respond with an ``ARP Reply`` (see below).
+* Si el ordenador está conectado a un hub, este enviará la petición ARP por todos los puertos (excepto por el que lo ha recibido). Si el router está conectado a este, responderá con una ``ARP Reply``, una respuesta ARP (ver a continación).
 
 Switch:
 
-* If the computer is connected to a switch, the switch will check its local
-  CAM/MAC table to see which port has the MAC address we are looking for. If
-  the switch has no entry for the MAC address it will rebroadcast the ARP
-  request to all other ports.
+* Si el equipo está conectado a un switch, el switch comprobará su tabla MAC/CAM para ver a qué puerto está conectada la IP que se está buscando. Si el switch no tiene ninguna entrada para esta MAC, la enviará por todos los otros puertos. 
 
-* If the switch has an entry in the MAC/CAM table it will send the ARP request
-  to the port that has the MAC address we are looking for.
+* Si el switch tiene una entrada en la tabla MAC/CAM, enviará la petición ARP únicamente por el puerto al que está conectado el equipo con la MAC solicitada. 
 
-* If the router is on the same "wire", it will respond with an ``ARP Reply``
-  (see below)
+* Si el router está conectado en la misma red, responderá con una respuesta ARP, ``ARP Reply``
 
 ``ARP Reply``::
 
-    Sender MAC: target:mac:address:here
-    Sender IP: target.ip.goes.here
-    Target MAC: interface:mac:address:here
-    Target IP: interface.ip.goes.here
+    MAC Origen : dirección:MAC:origen:aquí
+    IP Origen  : direccion.ip.origen.aquí
+    MAC Destino: FF:FF:FF:FF:FF:FF (Broadcast)
+    IP Destino : direccion.ip.destino.aquí
 
-Now that the network library has the IP address of either our DNS server or
-the default gateway it can resume its DNS process:
+Ahora que la biblioteca de red tiene la dirección IP de nuestro servidor DNS o la puerta de enlace predeterminada, el equipo puede reanudar su proceso de DNS:
 
-* The DNS client establishes a socket to UDP port 53 on the DNS server,
-  using a source port above 1023.
-* If the response size is too large, TCP will be used instead.
-* If the local/ISP DNS server does not have it, then a recursive search is
-  requested and that flows up the list of DNS servers until the SOA is reached,
-  and if found an answer is returned.
+* El cliente abre un socket con destino al puerto 53/UDP en el servidor DNS, utilizando un puerto de origen por encima de 1023.
+* Si el cliente estuviera configurado para utilzar DNSoverHTTPS o DNSoverTLS, el destino del socket sería 53/TCP.
+* Si el servidor DNS local, o el de nuestro ISP, no dispone de la respuesta en su caché, entonces realiza una petición recursiva. Esta petición recursiva avanza hasta que se encuentra el SOA (``Start Of A uthority``) y devuelve la respuesta de este. 
 
 Opening of a socket
 -------------------
@@ -673,9 +592,11 @@ page rendering and painting.
 .. _`New Reno`: https://en.wikipedia.org/wiki/TCP_congestion_control#TCP_New_Reno
 .. _`congestion window`: https://en.wikipedia.org/wiki/TCP_congestion_control#Congestion_window
 .. _`maximum segment size`: https://en.wikipedia.org/wiki/Maximum_segment_size
-.. _`varies by OS` : https://en.wikipedia.org/wiki/Hosts_%28file%29#Location_in_the_file_system
+.. _`puede variar por OS` : https://en.wikipedia.org/wiki/Hosts_%28file%29#Location_in_the_file_system
 .. _`简体中文`: https://github.com/skyline75489/what-happens-when-zh_CN
 .. _`한국어`: https://github.com/SantonyChoi/what-happens-when-KR
 .. _`日本語`: https://github.com/tettttsuo/what-happens-when-JA
 .. _`downgrade attack`: http://en.wikipedia.org/wiki/SSL_stripping
-.. _`OSI Model`: https://en.wikipedia.org/wiki/OSI_model
+.. _ `ataques de degradación`: https://encyclopedia.kaspersky.com/glossary/downgrade-attack/
+.. _`modelo OSI`: https://es.wikipedia.org/wiki/Modelo_OSI
+.. _`lista HSTS`: https://source.chromium.org/chromium/chromium/src/+/main:net/http/transport_security_state_static.json 
