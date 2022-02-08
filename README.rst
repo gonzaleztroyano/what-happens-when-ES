@@ -338,155 +338,99 @@ Los elementos comunes de la interfaz de usuario son:
 * Botones Actualizar y Detener para actualizar o detener la carga de documentos actuales
 * Botón de inicio que te lleva a tu página de inicio
 
-**Browser High-Level Structure**
+**Estructura del navegador (en alto nivel)**
 
 The components of the browsers are:
 
-* **User interface:** The user interface includes the address bar,
-  back/forward button, bookmarking menu, etc. Every part of the browser
-  display except the window where you see the requested page.
-* **Browser engine:** The browser engine marshals actions between the UI
-  and the rendering engine.
-* **Rendering engine:** The rendering engine is responsible for displaying
-  requested content. For example if the requested content is HTML, the
-  rendering engine parses HTML and CSS, and displays the parsed content on
-  the screen.
-* **Networking:** The networking handles network calls such as HTTP requests,
-  using different implementations for different platforms behind a
-  platform-independent interface.
-* **UI backend:** The UI backend is used for drawing basic widgets like combo
-  boxes and windows. This backend exposes a generic interface that is not
-  platform-specific.
-  Underneath it uses operating system user interface methods.
-* **JavaScript engine:** The JavaScript engine is used to parse and
-  execute JavaScript code.
-* **Data storage:** The data storage is a persistence layer. The browser may
-  need to save all sorts of data locally, such as cookies. Browsers also
-  support storage mechanisms such as localStorage, IndexedDB, WebSQL and
-  FileSystem.
+* **Interfaz de usuario:** La interfaz de usuario incluye la barra de direcciones, el botón de avance/retroceso, el menú de favoritos, etc. Todas las partes de la pantalla del navegador excepto la ventana donde se ve la página solicitada.
 
-HTML parsing
-------------
+* **Motor del navegador:** el motor del navegador ordena las acciones entre la interfaz de usuario y el motor de renderizado.
 
-The rendering engine starts getting the contents of the requested
-document from the networking layer. This will usually be done in 8kB chunks.
+* **Motor de renderizado:** El motor de renderizado es responsable de mostrar el contenido solicitado. Por ejemplo, si el contenido solicitado es HTML, el motor de representación analiza HTML y CSS y muestra el contenido analizado en la pantalla.
 
-The primary job of the HTML parser is to parse the HTML markup into a parse tree.
+* **Redes:** Las redes manejan llamadas de red, como solicitudes HTTP, utilizando diferentes implementaciones para diferentes plataformas detrás de una interfaz independiente de la plataforma.
 
-The output tree (the "parse tree") is a tree of DOM element and attribute
-nodes. DOM is short for Document Object Model. It is the object presentation
-of the HTML document and the interface of HTML elements to the outside world
-like JavaScript. The root of the tree is the "Document" object. Prior to
-any manipulation via scripting, the DOM has an almost one-to-one relation to
-the markup.
+* **Backend de la interfaz de usuario:** el backend de la interfaz de usuario se usa para dibujar widgets básicos como cuadros combinados y ventanas. Este backend expone una interfaz genérica que no es específica de la plataforma. Debajo, utiliza métodos de interfaz de usuario del sistema operativo.
 
-**The parsing algorithm**
+* **Motor JavaScript:** El motor JavaScript se utiliza para analizar y ejecutar código JavaScript.
 
-HTML cannot be parsed using the regular top-down or bottom-up parsers.
+* **Almacenamiento de datos:** El almacenamiento de datos es una capa de persistencia. Es posible que el navegador necesite guardar todo tipo de datos localmente, como cookies. Los navegadores también admiten mecanismos de almacenamiento como localStorage, IndexedDB, WebSQL y FileSystem.
 
-The reasons are:
+Análisis de HTML
+-------------------
 
-* The forgiving nature of the language.
-* The fact that browsers have traditional error tolerance to support well
-  known cases of invalid HTML.
-* The parsing process is reentrant. For other languages, the source doesn't
-  change during parsing, but in HTML, dynamic code (such as script elements
-  containing `document.write()` calls) can add extra tokens, so the parsing
-  process actually modifies the input.
+El motor de renderizado comienza a obtener  de la capa de red el contenido del documento solicitado. Esto generalmente se hará en fragmentos de 8kB.
 
-Unable to use the regular parsing techniques, the browser utilizes a custom
-parser for parsing HTML. The parsing algorithm is described in
-detail by the HTML5 specification.
+El trabajo principal del analizador HTML es analizar el marcado HTML en un árbol de análisis.
 
-The algorithm consists of two stages: tokenization and tree construction.
+El árbol de salida (el "*parse tree*") es un árbol de elementos nodos y atributos DOM. DOM es la abreviatura de *Document Object Model*, Modelo de Objetos de Documento. 
 
-**Actions when the parsing is finished**
+Es la presentación de objetos del documento HTML y la interfaz de los elementos HTML con el mundo exterior como JavaScript. La raíz del árbol es el objeto "Document". Antes de cualquier manipulación a través de secuencias de comandos, el DOM tiene una relación casi uno a uno con el marcado.
 
-The browser begins fetching external resources linked to the page (CSS, images,
-JavaScript files, etc.).
+**El algoritmo de análisis ("parseo")**
 
-At this stage the browser marks the document as interactive and starts
-parsing scripts that are in "deferred" mode: those that should be
-executed after the document is parsed. The document state is
-set to "complete" and a "load" event is fired.
+HTML no se puede analizar con los analizadores normales: de arriba hacia abajo o de abajo hacia arriba.
 
-Note there is never an "Invalid Syntax" error on an HTML page. Browsers fix
-any invalid content and go on.
+Las razones son:
 
-CSS interpretation
-------------------
+* La naturaleza indulgente del lenguaje.
+* El hecho de que los navegadores tengan una tolerancia a errores tradicional para admitir casos bien conocidos de HTML no válido.
+* El proceso de análisis es reentrante. Para otros idiomas, la fuente no cambia durante el análisis, pero en HTML, el código dinámico (como los elementos de *scripts* que contienen llamadas `document.write()`) pueden agregar tokens adicionales, por lo que el proceso de análisis en realidad modifica la entrada.
 
-* Parse CSS files, ``<style>`` tag contents, and ``style`` attribute
-  values using `"CSS lexical and syntax grammar"`_
-* Each CSS file is parsed into a ``StyleSheet object``, where each object
-  contains CSS rules with selectors and objects corresponding CSS grammar.
-* A CSS parser can be top-down or bottom-up when a specific parser generator
-  is used.
+Incapaz de utilizar las técnicas de análisis habituales, el navegador utiliza un analizador personalizado para analizar HTML. El algoritmo de análisis se describe en detalle en la especificación HTML5.
 
-Page Rendering
---------------
+El algoritmo consta de dos etapas: tokenización y construcción del árbol.
 
-* Create a 'Frame Tree' or 'Render Tree' by traversing the DOM nodes, and
-  calculating the CSS style values for each node.
-* Calculate the preferred width of each node in the 'Frame Tree' bottom-up
-  by summing the preferred width of the child nodes and the node's
-  horizontal margins, borders, and padding.
-* Calculate the actual width of each node top-down by allocating each node's
-  available width to its children.
-* Calculate the height of each node bottom-up by applying text wrapping and
-  summing the child node heights and the node's margins, borders, and padding.
-* Calculate the coordinates of each node using the information calculated
-  above.
-* More complicated steps are taken when elements are ``floated``,
-  positioned ``absolutely`` or ``relatively``, or other complex features
-  are used. See
-  http://dev.w3.org/csswg/css2/ and http://www.w3.org/Style/CSS/current-work
-  for more details.
-* Create layers to describe which parts of the page can be animated as a group
-  without being re-rasterized. Each frame/render object is assigned to a layer.
-* Textures are allocated for each layer of the page.
-* The frame/render objects for each layer are traversed and drawing commands
-  are executed for their respective layer. This may be rasterized by the CPU
-  or drawn on the GPU directly using D2D/SkiaGL.
-* All of the above steps may reuse calculated values from the last time the
-  webpage was rendered, so that incremental changes require less work.
-* The page layers are sent to the compositing process where they are combined
-  with layers for other visible content like the browser chrome, iframes
-  and addon panels.
-* Final layer positions are computed and the composite commands are issued
-  via Direct3D/OpenGL. The GPU command buffer(s) are flushed to the GPU for
-  asynchronous rendering and the frame is sent to the window server.
+**Acciones cuando finaliza el análisis**
 
-GPU Rendering
--------------
+El navegador comienza a obtener recursos externos vinculados a la página (CSS, imágenes, archivos JavaScript, etc.).
 
-* During the rendering process the graphical computing layers can use general
-  purpose ``CPU`` or the graphical processor ``GPU`` as well.
+En esta etapa, el navegador marca el documento como interactivo y comienza a analizar los scripts que están en modo "diferido": aquellos que deben ejecutarse después de analizar el documento. El estado del documento se establece en "*complete*" (completo, en castellano) y se activa un evento de "*load*" (cargado, en castellano).
 
-* When using ``GPU`` for graphical rendering computations the graphical
-  software layers split the task into multiple pieces, so it can take advantage
-  of ``GPU`` massive parallelism for float point calculations required for
-  the rendering process.
+Ten en cuenta que nunca aparece un error de "Sintaxis no válida" en una página HTML. Los navegadores corrigen cualquier contenido no válido y continúan.
+
+Interpretación de CSS
+----------------------
+
+* Analizar archivos CSS, contenidos de etiquetas ``<style>`` y valores de atributo ``style`` utilizando la `"Sintaxis y léxico CSS"`_
+* Cada archivo CSS se analiza en un ``StyleSheet object``, donde cada objeto contiene reglas CSS con selectores y objetos correspondientes a la gramática CSS.
+* Un analizador CSS puede ser de arriba hacia abajo o de abajo hacia arriba cuando se usa un analizador específico.
+
+Renderización de la página
+---------------------------
+
+* Se crea un "*Frame Tree*", "Árbol de marcos" en castellano, o "*Render Tree*", 'Árbol de procesamiento' en castellano, recorriendo los nodos DOM y calculando los valores de estilo CSS para cada nodo.
+* Ce calcula el ancho preferido de cada nodo en el "*Frame Tree*" de abajo hacia arriba sumando el ancho preferido de los nodos secundarios y los márgenes horizontales (*margins*), bordes (*borders*)  y relleno (*padding*) del nodo.
+* Se calcula el ancho real de cada nodo de arriba hacia abajo asignando el ancho disponible de cada nodo a sus hijos.
+* Se calcula la altura de cada nodo de abajo hacia arriba aplicando ajuste de texto y sumando las alturas de los nodos secundarios y los márgenes, bordes y relleno del nodo.
+* Se calculan las coordenadas de cada nodo utilizando la información calculada anteriormente.
+* Se toman pasos más complicados cuando los elementos están "flotados" (``float``), posicionados ``absolutamente`` o ``relativamente``, u otras características complejas son utilizados. Consulte https://dev.w3.org/csswg/css2/ y https://www.w3.org/Style/CSS/current-work para obtener más detalles.
+* Se crean capas para describir qué partes de la página se pueden animar como un grupo sin volver a ser rasterizados. Cada frame/render de renderizado se asigna a una capa.
+* Las texturas se asignan para cada capa de la página.
+* Los objetos de frame/render para cada capa se recorren y los comandos de dibujo se ejecutan para cada capa. Esto puede ser rasterizado por la CPU o dibujado en la GPU directamente usando D2D/SkiaGL.
+* Todos los pasos anteriores pueden reutilizar los valores calculados desde la última vez que se representó la página web, por lo que los cambios incrementales requieren menos carga de trabajo.
+* Las capas de la página se envían al proceso de composición donde se combinan con capas para otro contenido visible como el iframes y paneles adicionales.
+* Las capas finales se calculan y los comandos de composición se emiten a través de Direct3D/OpenGL. Los búferes de comandos de la GPU se vuelcan en la GPU para la representación asíncrona y el resultado se envía al servidor de ventanas.
+
+Rendización GPU
+----------------
+
+* Durante el proceso de renderizado, las capas de computación gráfica pueden usar la ``CPU`` de propósito general o también el procesador gráfico, la ``GPU``.
+
+* Cuando se usa la ``GPU`` para cálculos de representación gráfica, las capas de software gráfico dividen la tarea en varias partes, por lo que puede aprovechar el paralelismo masivo de ``GPU`` para los cálculos de punto flotante necesarios para el proceso de renderizado.
 
 
-Window Server
--------------
+Servidor de ventanas
+-----------------------
 
-Post-rendering and user-induced execution
------------------------------------------
-
-After rendering has been completed, the browser executes JavaScript code as a result
-of some timing mechanism (such as a Google Doodle animation) or user
-interaction (typing a query into the search box and receiving suggestions).
-Plugins such as Flash or Java may execute as well, although not at this time on
-the Google homepage. Scripts can cause additional network requests to be
-performed, as well as modify the page or its layout, causing another round of
-page rendering and painting.
+Post-procesado y ejecuciones a causa del usuario
+--------------------------------------------------
+Una vez que se ha completado el procesamiento, el navegador ejecuta el código JavaScript como resultado de algún mecanismo de tiempo (como una animación de Google Doodle) o la interacción del usuario (escribir una consulta en el cuadro de búsqueda y recibir sugerencias). Los complementos como Flash o Java también pueden ejecutarse, aunque no en este momento en la página de inicio de Google. Los scripts pueden hacer que se realicen solicitudes de red adicionales, así como modificar la página o su diseño, lo que provoca otra ronda de renderizado y pintado de la página.
 
 .. _`"What happens when..."`: https://github.com/alex/what-happens-when
 .. _`Alex Waynor`: https://github.com/alex
 .. _`Creative Commons Zero`: https://creativecommons.org/publicdomain/zero/1.0/
-.. _`"CSS lexical and syntax grammar"`: http://www.w3.org/TR/CSS2/grammar.html
+.. _`"Sintaxis y léxico CSS"`: http://www.w3.org/TR/CSS2/grammar.html
 .. _`Punycode`: https://en.wikipedia.org/wiki/Punycode
 .. _`Ethernet`: http://en.wikipedia.org/wiki/IEEE_802.3
 .. _`WiFi`: https://en.wikipedia.org/wiki/IEEE_802.11
