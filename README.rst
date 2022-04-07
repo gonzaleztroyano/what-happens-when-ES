@@ -100,10 +100,18 @@ Parsear la URL
 
     - ``Protocolo``  "http"
         Usa 'Hyper Text Transfer Protocol', HTTP
+    
+    - ``Dominio`` "google.com"
+        El servidor es google.com
 
     - ``Recurso``  "/"
         Recupera la página principal (index)
 
+Una URL/URI se puede parsear de ls siguiente forma:
+
+.. image:: https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/URI_syntax_diagram.svg/800px-URI_syntax_diagram.svg.png
+    :width: 300
+    :alt: Esquema de parseo de una URL
 
 ¿Es una URL o un término de búsqueda?
 -------------------------------------
@@ -134,7 +142,7 @@ Búsqueda DNS
 
 * Si ``gethostbyname`` no tiene la respuesta en caché o no la ha podido encontrar en el archivo ``hosts``, realiza una petición al servidor DNS configurado en los ajustes de red. Normalmente, es el *router* de nuestro operador o su servidor de cacheo DNS. En Windows usará un algoritmo que determina qué servidor DNS consultar primera para resolver el nombre de dominio. (Véase [este enlace](http://technet.microsoft.com/en-us/library/dd197552(WS.10).aspx))
 
-* Si el servidor DNS está en la misma subred, la librería de red sigue el ``Proceso ARP`` a continuación indicado para encontrar el servidor DNS.
+* Si el servidor DNS está en la misma subred, la librería de red sigue el ``Proceso ARP`` a continuación indicado para encontrar el servidor DNS. En el caso de que la red esté trabajando con IPv6, se usa el protocolo de ``neighbor discovery``, que es ligeramente diferente. 
 
 * Si el servidor DNS se encuentra en una subred diferente, la librería de red sigue el ``Proceso ARP`` debajo indicado para encontrar la puerta de enlace hacia esa red (que normalmente será la puerta de enlace por defecto).
 
@@ -163,7 +171,7 @@ Búsqueda DNS
 Proceso ARP
 ------------
 
-Para enviar una solicitud ARP (Address Resolution Protocol) de broadcast, la librería de red necesita conocer la dirección IP a buscar. También necsita conocer la dirección MAC de la interfaz por la que va a enviar la solicitud ARP. 
+Para enviar una solicitud ARP (Address Resolution Protocol) de broadcast, la librería de red necesita conocer la dirección IP a buscar. También necsita conocer la dirección MAC de la interfaz por la que va a enviar la solicitud ARP. Este proceso es diferente en IPv6. 
 
 El caché ARP es primeramente comprobado en busca de una entrada ARP para la dirección IP objetivo. Si se encuentra en la caché, devuelve el resultado: IP objetico = Dirección MAC.
 
@@ -181,11 +189,11 @@ Si la entrada no se encuentra en la caché ARP:
     MAC Destino: FF:FF:FF:FF:FF:FF (Broadcast)
     IP Destino : direccion.ip.destino.aquí
 
-Dependiendo qué dispositivos se encuentren entre el equipo y el router:
+Dependiendo qué dispositivos se encuentren entre el equipo y equipo de destino:
 
 Directamente conectado:
 
-* Si el equipo está conectado directamente al router, el router responde con una ``ARP Reply``, una respuesta ARP (ver a continación).
+* Si el equipo está conectado directamente al equipo destino, este responde con una ``ARP Reply``, una respuesta ARP (ver a continación).
 
 Hub:
 
@@ -206,15 +214,19 @@ Switch:
     MAC Destino: FF:FF:FF:FF:FF:FF (Broadcast)
     IP Destino : direccion.ip.destino.aquí
 
+Continúa proceso DNS
+---------------------
+
+
 Ahora que la biblioteca de red tiene la dirección IP de nuestro servidor DNS o la puerta de enlace predeterminada, el equipo puede reanudar su proceso de DNS:
 
 * El cliente abre un socket con destino al puerto 53/UDP en el servidor DNS, utilizando un puerto de origen por encima de 1023.
 * Si el cliente estuviera configurado para utilzar DNSoverHTTPS o DNSoverTLS, el destino del socket sería 53/TCP.
-* Si el servidor DNS local, o el de nuestro ISP, no dispone de la respuesta en su caché, entonces realiza una petición recursiva. Esta petición recursiva avanza hasta que se encuentra el SOA (``Start Of A uthority``) y devuelve la respuesta de este. 
+* Si el servidor DNS local, o el de nuestro ISP, no dispone de la respuesta en su caché, entonces realiza una petición recursiva. Esta petición recursiva avanza hasta que se encuentra el SOA (``Start Of Authority``) y devuelve la respuesta de este. 
 
 Abrir un socket
 -------------------
-Una vez que el navegador recibe la dirección IP del servidor de destino, la almacena, junto con el  número de puerto dado en la URL (el protocolo HTTP predeterminado es el puerto 80 y HTTPS el puerto 443). Realiza una llamada a la función de la biblioteca del sistema llamada ` `socket`` y solicita un flujo de socket TCP: ``AF_INET/AF_INET6`` y ``SOCK_STREAM``.
+Una vez que el navegador recibe la dirección IP del servidor de destino, la almacena, junto con el  número de puerto dado en la URL (el protocolo HTTP predeterminado es el puerto 80 y HTTPS el puerto 443). Realiza una llamada a la función de la biblioteca del sistema llamada ` `socket`` y solicita un flujo de socket TCP: ``AF_INET/AF_INET6`` y ``SOCK_STREAM``. Una vez el socket cliente es creado, la aplicación llama a la función ``connect`` con el socket, la dirección IP del servidor HTTP y el puerto.
 
 * Esta solicitud se pasa primero a la capa de transporte donde se crea un segmento TCP. El puerto de destino se agrega al encabezado y se elige un puerto de origen dentro del rango de puertos dinámicos del kernel (ip_local_port_range en Linux).
 
@@ -348,6 +360,7 @@ El servidor HTTPD (HTTP Daemon) es el que maneja las solicitudes/respuestas en e
      ``PATCH``, ``DELETE``, ``CONNECT``, ``OPTIONS``, o ``TRACE``). En el caso de una URL ingresada directamente en la barra de direcciones, el método será ``GET``.
    * Dominio, en este caso google.com.
    * Página o ruta solicitada.  En este caso,  */* (puesto que no se solicitó una ruta/página específica, / es la ruta por defecto).
+* A menudo (siempre es cierto para Google y páginas webs grandes), el servidor que recibe la solicitud inicialmente es un balanceador de carga. Este equipo "leerá" la petición y la enviará a uno de los servidores web con los que mantiene comunicación. La decisión de a qué servidor web enviarlo variará según la utilizanción y el estado de cada uno de ellos, así como la petición en sí.
 * El servidor verifica que haya un host virtual configurado en el servidor que se corresponda con google.com.
 * El servidor verifica que google.com puede aceptar solicitudes GET.
 * El servidor verifica que el cliente tiene permiso para usar este método (por IP, autenticación, etc.).
