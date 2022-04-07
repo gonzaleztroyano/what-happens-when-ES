@@ -126,7 +126,7 @@ Comprobar la lista HSTS
 Búsqueda DNS
 ------------
 
-* El navegador comprueba si el dominio está en su caché. (Para ver el caché DNS en Chrome, podemos acceder a `chrome://net-internals/#dns <chrome://net-internals/#dns>`_).
+* El navegador comprueba si el dominio está en su caché. (Para ver el caché DNS en Chrome, podemos acceder a `chrome://net-internals/#dns <chrome://net-internals/#dns>`_. Para verlo en Firefox, puedes acceder a `about:networking#dns <about:networking#dns>`_. En el navegador Edge basado en chromium, puedes acceder a `edge://net-internals/#dns`_).
 
 * Si no es encontrado, el navegador llama a la función ``gethostbyname`` (varía según el sistema operativo) para hacer la búsqueda DNS.
 
