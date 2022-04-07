@@ -257,6 +257,20 @@ Este "enviar y recibir" ocurre múltiples veces siguiendo el esquema de conexió
 Handshake TLS
 -------------
 
+El protocolo TSL es el sucesor de SSL, que provee un mecanismo seguro para autenticación utilizando certificados x509.
+También provee un canal de comunicación bidireccional entre dos partes, como un navegador y un cliente web, para establecer los detalles de su comunicación.
+Un "TLS Handshake", que se podría traducir como "apretón de manos TLS", ocurre cuando usuario accede a un sitio a través de HTTPS (HTTP Seguro. Muy por encima, HTTP es el protocolo sobre el que se comunican las páginas web). El navegador comienza a consultar el servidor de origen del sitio web, también ocurre cada vez que cualquier otra comunicación utiliza HTTPS, incluidas las llamadas API y DNS over HTTPS/DNS over TLS.
+
+Durante el curso de un "TLS Handshake", el cliente y el servidor juntos harán lo siguiente:
+
+* Especificar qué versión de TLS (TLS 1.0, 1.2, 1.3, etc.) usarán.
+* Decidir qué suites de cifrado utilizarán.
+* Autenticar la identidad del servidor a través de la clave pública del servidor
+y la firma digital de la autoridad certificadora SSL.
+* Generar claves de sesión para usar encriptación simétrica (más eficiente y rápida que la asimétrica) después de completar el *TLS Handshake*.
+
+Y los pasos para realizar esto son los siguientes:
+
 * La computadora cliente envía un mensaje ``ClientHello`` al servidor con su versión Transport Layer Security (TLS), lista de algoritmos de cifrado y métodos de compresión disponibles.
 
 * El servidor responde con un mensaje ``ServerHello`` al cliente con la versión de TLS, el cifrado seleccionado, los métodos de compresión seleccionados y el certificado público del servidor firmado por una CA (Autoridad de Certificación, *Certificate Authority*). El certificado contiene una clave pública que utilizará el cliente para cifrar el resto del protocolo de enlace hasta que se pueda acordar una clave simétrica.
