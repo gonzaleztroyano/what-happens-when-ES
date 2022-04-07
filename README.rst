@@ -311,7 +311,9 @@ A veces, debido a la congestión de la red o conexiones de hardware inestables, 
 Protocolo HTTP
 ---------------
 
-Si el navegador que está utilizando fue escrito por Google, en lugar de enviar una solicitud HTTP para recuperar la página, enviará una solicitud para intentar negociar con el servidor una "actualización" de HTTP al protocolo SPDY.
+Si el navegador que está utilizando fue escrito por Google y tiene una versióna anterior al año 2016, en lugar de enviar una solicitud HTTP para recuperar la página, enviará una solicitud para intentar negociar con el servidor una "actualización" de HTTP al protocolo SPDY.
+
+Este protocolo, SPDY fue un intento de Google para mejorar la navegación web. Fue un protocolo experimental que quedó `descontinuado`_ en favor de HTTP/2.
 
 Si el cliente está utilizando el protocolo HTTP y no es compatible con SPDY, envía una solicitud al servidor de la forma (esto ocurrirá en la mayoría de los casos, pues es el estandar)::
 
@@ -504,3 +506,4 @@ Una vez que se ha completado el procesamiento, el navegador ejecuta el código J
 .. _ `ataques de degradación`: https://encyclopedia.kaspersky.com/glossary/downgrade-attack/
 .. _`modelo OSI`: https://es.wikipedia.org/wiki/Modelo_OSI
 .. _`lista HSTS`: https://source.chromium.org/chromium/chromium/src/+/main:net/http/transport_security_state_static.json 
+.. _`descontinuado`: https://blog.chromium.org/2016/02/transitioning-from-spdy-to-http2.html
