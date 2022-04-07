@@ -31,7 +31,7 @@ Cuando presionas la tecla "g" el navegador recibe el evento y la función de aut
 
 Dependiendo del algoritmo del navegador y si estás en una ventana de incógnito (también llamada Privada o InPrivate) o no, varias sugerencias te serán mostradas debajo de la barra de direcciones. La mayoría de estos algoritmos ordenan y priorizan los resultados basándose en el historial de búsqueda, marcadores, cookies, y consultas populares en todo Internet. 
 
-Según continúas escribiendo "google.com" muchos bloques de código son ejecutados y las sugerencias serán mejoradas con cada tecla presionada. Incluso te acabará sugieriendo "google.com" antes de que termines de escribirlo. 
+Según continúas escribiendo "google.com" muchos bloques de código son ejecutados y las sugerencias serán mejoradas con cada tecla presionada. Incluso te acabará sugieriendo "google.com" antes de que termines de escribirlo. Es importante aclarar que las sugerencias mostradas no son únicamente las que empiezan por la letra ``g``, sino que también pueden aparecer sugerencias que el algoritmos considere como útiles, aún sin contenener la letra g. 
 
 
 La tecla "enter" toca fondo
