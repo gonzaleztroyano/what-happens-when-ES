@@ -127,11 +127,38 @@ Búsqueda DNS
 ------------
 
 * El navegador comprueba si el dominio está en su caché. (Para ver el caché DNS en Chrome, podemos acceder a `chrome://net-internals/#dns <chrome://net-internals/#dns>`_).
+
 * Si no es encontrado, el navegador llama a la función ``gethostbyname`` (varía según el sistema operativo) para hacer la búsqueda DNS.
+
 * ``gethostbyname`` comprueba si el nombre de dominio puede ser resuelto buscando en el archivo ``hosts`` local (cuya localización `puede variar por OS`_) antes de intentar su resolución mediante DNS.
-* Si ``gethostbyname`` no tiene la respuesta en caché o no la ha podido encontrar en el archivo ``hosts``, realiza una petición al servidor DNS configurado en los ajustes de red. Normalmente, es el *router* de nuestro operador o su servidor de cacheo DNS.
-* Si el servidor DNS está en la misma subred, la librería de red sigue ``Proceso ARP`` a continuación indicado para encontrar el servidor DNS.
+
+* Si ``gethostbyname`` no tiene la respuesta en caché o no la ha podido encontrar en el archivo ``hosts``, realiza una petición al servidor DNS configurado en los ajustes de red. Normalmente, es el *router* de nuestro operador o su servidor de cacheo DNS. En Windows usará un algoritmo que determina qué servidor DNS consultar primera para resolver el nombre de dominio. (Véase [este enlace](http://technet.microsoft.com/en-us/library/dd197552(WS.10).aspx))
+
+* Si el servidor DNS está en la misma subred, la librería de red sigue el ``Proceso ARP`` a continuación indicado para encontrar el servidor DNS.
+
 * Si el servidor DNS se encuentra en una subred diferente, la librería de red sigue el ``Proceso ARP`` debajo indicado para encontrar la puerta de enlace hacia esa red (que normalmente será la puerta de enlace por defecto).
+
+* Prácticamente la gran mayoría de veces el servidor DNS definido en la red no mantiene la zona de "google.com", a esto lo conocemos como "Servidor autoritativo". La única excepción para esto, sería que quizá un equipo dentro del propio centro de datos de Google esté solicitando la respuesta (este no será seguramente nuestro caso...), así que el servidor DNS local intentará averiguar qué servidor DNS "posee" el dominio google.com. 
+
+* Todos los equipos que utilizan DNS poseen una lista de "servidores raíz" predefinidos. Utilizando su propio algoritmo, elegirá un servidor raíz para encontrar el servidor SOA (Start Of Authority).
+
+* Una vez que se elige el servidor raíz, se realiza una solicitud del TLD (Top-Level Domain). En este caso, es "com". Entonces, la solicitud de NS para "com". se le pregunta al servidor raíz.
+
+* Una respuesta generará una lista de servidores para el TLD "com", al momento de escribir esto,  [a-m].gtld-servers.net (servido por Verisgn)
+
+* Se envía otra solicitud de NS a uno de los [a-m].gtld-servers.net para "google.com".
+
+* El servidor dns de Verisign responderá con los 4 servidores DNS de google, ns1.google.com a ns4.google.com y también incluirá las (direcciones IPv4) para llegar a ellos directamente. Si no los incluyera en la respuesta, el servidor DNS deberá volver a preguntar sobre estos. 
+
+* El servidor DNS solicitante utilizará esta información para llegar al servidor DNS "real" de google.com (el que posee la SOA del dominio) y pide una resolución A (o AAAA si es IPv6) con "www.google.com". como la solicitud.
+
+* El servidor DNS de Google utilizará la dirección IP de conexión remota y la resolverá a través de un instantánea reciente de la red BGP para identificar el origen ASN (Número de Sistema Autónomo) de la solicitud (el número único de su ISP, proveedor de Internet).
+
+* El ASN se verifica contra una base de datos para saber qué centro de datos de Google se considera el mejor para responder a una solicitud de su ISP.
+
+* El servidor DNS de Google devuelve la dirección IP del centro de datos más cercano según la ubicación estimada del usuario, en base al su dirección IP y el ASN al que pertenece esta.
+
+* El servidor DNS recursivo/local devolverá la dirección IP al sistema operativo.
 
 Proceso ARP
 ------------
