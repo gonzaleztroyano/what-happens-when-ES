@@ -31,7 +31,7 @@ Cuando presionas la tecla "g" el navegador recibe el evento y la función de aut
 
 Dependiendo del algoritmo del navegador y si estás en una ventana de incógnito (también llamada Privada o InPrivate) o no, varias sugerencias te serán mostradas debajo de la barra de direcciones. La mayoría de estos algoritmos ordenan y priorizan los resultados basándose en el historial de búsqueda, marcadores, cookies, y consultas populares en todo Internet. 
 
-Según continúas escribiendo "google.com" muchos bloques de código son ejecutados y las sugerencias serán mejoradas con cada tecla presionada. Incluso te acabará sugieriendo "google.com" antes de que termines de escribirlo. 
+Según continúas escribiendo "google.com" muchos bloques de código son ejecutados y las sugerencias serán mejoradas con cada tecla presionada. Incluso te acabará sugieriendo "google.com" antes de que termines de escribirlo. Es importante aclarar que las sugerencias mostradas no son únicamente las que empiezan por la letra ``g``, sino que también pueden aparecer sugerencias que el algoritmos considere como útiles, aún sin contenener la letra g. 
 
 
 La tecla "enter" toca fondo
@@ -100,10 +100,18 @@ Parsear la URL
 
     - ``Protocolo``  "http"
         Usa 'Hyper Text Transfer Protocol', HTTP
+    
+    - ``Dominio`` "google.com"
+        El servidor es google.com
 
     - ``Recurso``  "/"
         Recupera la página principal (index)
 
+Una URL/URI se puede parsear de ls siguiente forma:
+
+.. image:: https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/URI_syntax_diagram.svg/800px-URI_syntax_diagram.svg.png
+    :width: 300
+    :alt: Esquema de parseo de una URL
 
 ¿Es una URL o un término de búsqueda?
 -------------------------------------
@@ -126,17 +134,44 @@ Comprobar la lista HSTS
 Búsqueda DNS
 ------------
 
-* El navegador comprueba si el dominio está en su caché. (Para ver el caché DNS en Chrome, podemos acceder a `chrome://net-internals/#dns <chrome://net-internals/#dns>`_).
+* El navegador comprueba si el dominio está en su caché. (Para ver el caché DNS en Chrome, podemos acceder a `chrome://net-internals/#dns <chrome://net-internals/#dns>`_. Para verlo en Firefox, puedes acceder a `about:networking#dns <about:networking#dns>`_. En el navegador Edge basado en chromium, puedes acceder a `edge://net-internals/#dns`_).
+
 * Si no es encontrado, el navegador llama a la función ``gethostbyname`` (varía según el sistema operativo) para hacer la búsqueda DNS.
+
 * ``gethostbyname`` comprueba si el nombre de dominio puede ser resuelto buscando en el archivo ``hosts`` local (cuya localización `puede variar por OS`_) antes de intentar su resolución mediante DNS.
-* Si ``gethostbyname`` no tiene la respuesta en caché o no la ha podido encontrar en el archivo ``hosts``, realiza una petición al servidor DNS configurado en los ajustes de red. Normalmente, es el *router* de nuestro operador o su servidor de cacheo DNS.
-* Si el servidor DNS está en la misma subred, la librería de red sigue ``Proceso ARP`` a continuación indicado para encontrar el servidor DNS.
+
+* Si ``gethostbyname`` no tiene la respuesta en caché o no la ha podido encontrar en el archivo ``hosts``, realiza una petición al servidor DNS configurado en los ajustes de red. Normalmente, es el *router* de nuestro operador o su servidor de cacheo DNS. En Windows usará un algoritmo que determina qué servidor DNS consultar primera para resolver el nombre de dominio. (Véase [este enlace](http://technet.microsoft.com/en-us/library/dd197552(WS.10).aspx))
+
+* Si el servidor DNS está en la misma subred, la librería de red sigue el ``Proceso ARP`` a continuación indicado para encontrar el servidor DNS. En el caso de que la red esté trabajando con IPv6, se usa el protocolo de ``neighbor discovery``, que es ligeramente diferente. 
+
 * Si el servidor DNS se encuentra en una subred diferente, la librería de red sigue el ``Proceso ARP`` debajo indicado para encontrar la puerta de enlace hacia esa red (que normalmente será la puerta de enlace por defecto).
+
+* Prácticamente la gran mayoría de veces el servidor DNS definido en la red no mantiene la zona de "google.com", a esto lo conocemos como "Servidor autoritativo". La única excepción para esto, sería que quizá un equipo dentro del propio centro de datos de Google esté solicitando la respuesta (este no será seguramente nuestro caso...), así que el servidor DNS local intentará averiguar qué servidor DNS "posee" el dominio google.com. 
+
+* Todos los equipos que utilizan DNS poseen una lista de "servidores raíz" predefinidos. Utilizando su propio algoritmo, elegirá un servidor raíz para encontrar el servidor SOA (Start Of Authority).
+
+* Una vez que se elige el servidor raíz, se realiza una solicitud del TLD (Top-Level Domain). En este caso, es "com". Entonces, la solicitud de NS para "com". se le pregunta al servidor raíz.
+
+* Una respuesta generará una lista de servidores para el TLD "com", al momento de escribir esto,  [a-m].gtld-servers.net (servido por Verisgn)
+
+* Se envía otra solicitud de NS a uno de los [a-m].gtld-servers.net para "google.com".
+
+* El servidor dns de Verisign responderá con los 4 servidores DNS de google, ns1.google.com a ns4.google.com y también incluirá las (direcciones IPv4) para llegar a ellos directamente. Si no los incluyera en la respuesta, el servidor DNS deberá volver a preguntar sobre estos. 
+
+* El servidor DNS solicitante utilizará esta información para llegar al servidor DNS "real" de google.com (el que posee la SOA del dominio) y pide una resolución A (o AAAA si es IPv6) con "www.google.com". como la solicitud.
+
+* El servidor DNS de Google utilizará la dirección IP de conexión remota y la resolverá a través de un instantánea reciente de la red BGP para identificar el origen ASN (Número de Sistema Autónomo) de la solicitud (el número único de su ISP, proveedor de Internet).
+
+* El ASN se verifica contra una base de datos para saber qué centro de datos de Google se considera el mejor para responder a una solicitud de su ISP.
+
+* El servidor DNS de Google devuelve la dirección IP del centro de datos más cercano según la ubicación estimada del usuario, en base al su dirección IP y el ASN al que pertenece esta.
+
+* El servidor DNS recursivo/local devolverá la dirección IP al sistema operativo.
 
 Proceso ARP
 ------------
 
-Para enviar una solicitud ARP (Address Resolution Protocol) de broadcast, la librería de red necesita conocer la dirección IP a buscar. También necsita conocer la dirección MAC de la interfaz por la que va a enviar la solicitud ARP. 
+Para enviar una solicitud ARP (Address Resolution Protocol) de broadcast, la librería de red necesita conocer la dirección IP a buscar. También necsita conocer la dirección MAC de la interfaz por la que va a enviar la solicitud ARP. Este proceso es diferente en IPv6. 
 
 El caché ARP es primeramente comprobado en busca de una entrada ARP para la dirección IP objetivo. Si se encuentra en la caché, devuelve el resultado: IP objetico = Dirección MAC.
 
@@ -154,11 +189,11 @@ Si la entrada no se encuentra en la caché ARP:
     MAC Destino: FF:FF:FF:FF:FF:FF (Broadcast)
     IP Destino : direccion.ip.destino.aquí
 
-Dependiendo qué dispositivos se encuentren entre el equipo y el router:
+Dependiendo qué dispositivos se encuentren entre el equipo y equipo de destino:
 
 Directamente conectado:
 
-* Si el equipo está conectado directamente al router, el router responde con una ``ARP Reply``, una respuesta ARP (ver a continación).
+* Si el equipo está conectado directamente al equipo destino, este responde con una ``ARP Reply``, una respuesta ARP (ver a continación).
 
 Hub:
 
@@ -179,15 +214,19 @@ Switch:
     MAC Destino: FF:FF:FF:FF:FF:FF (Broadcast)
     IP Destino : direccion.ip.destino.aquí
 
+Continúa proceso DNS
+---------------------
+
+
 Ahora que la biblioteca de red tiene la dirección IP de nuestro servidor DNS o la puerta de enlace predeterminada, el equipo puede reanudar su proceso de DNS:
 
 * El cliente abre un socket con destino al puerto 53/UDP en el servidor DNS, utilizando un puerto de origen por encima de 1023.
 * Si el cliente estuviera configurado para utilzar DNSoverHTTPS o DNSoverTLS, el destino del socket sería 53/TCP.
-* Si el servidor DNS local, o el de nuestro ISP, no dispone de la respuesta en su caché, entonces realiza una petición recursiva. Esta petición recursiva avanza hasta que se encuentra el SOA (``Start Of A uthority``) y devuelve la respuesta de este. 
+* Si el servidor DNS local, o el de nuestro ISP, no dispone de la respuesta en su caché, entonces realiza una petición recursiva. Esta petición recursiva avanza hasta que se encuentra el SOA (``Start Of Authority``) y devuelve la respuesta de este. 
 
 Abrir un socket
 -------------------
-Una vez que el navegador recibe la dirección IP del servidor de destino, la almacena, junto con el  número de puerto dado en la URL (el protocolo HTTP predeterminado es el puerto 80 y HTTPS el puerto 443). Realiza una llamada a la función de la biblioteca del sistema llamada ` `socket`` y solicita un flujo de socket TCP: ``AF_INET/AF_INET6`` y ``SOCK_STREAM``.
+Una vez que el navegador recibe la dirección IP del servidor de destino, la almacena, junto con el  número de puerto dado en la URL (el protocolo HTTP predeterminado es el puerto 80 y HTTPS el puerto 443). Realiza una llamada a la función de la biblioteca del sistema llamada ` `socket`` y solicita un flujo de socket TCP: ``AF_INET/AF_INET6`` y ``SOCK_STREAM``. Una vez el socket cliente es creado, la aplicación llama a la función ``connect`` con el socket, la dirección IP del servidor HTTP y el puerto.
 
 * Esta solicitud se pasa primero a la capa de transporte donde se crea un segmento TCP. El puerto de destino se agrega al encabezado y se elige un puerto de origen dentro del rango de puertos dinámicos del kernel (ip_local_port_range en Linux).
 
@@ -230,6 +269,20 @@ Este "enviar y recibir" ocurre múltiples veces siguiendo el esquema de conexió
 Handshake TLS
 -------------
 
+El protocolo TSL es el sucesor de SSL, que provee un mecanismo seguro para autenticación utilizando certificados x509.
+También provee un canal de comunicación bidireccional entre dos partes, como un navegador y un cliente web, para establecer los detalles de su comunicación.
+Un "TLS Handshake", que se podría traducir como "apretón de manos TLS", ocurre cuando usuario accede a un sitio a través de HTTPS (HTTP Seguro. Muy por encima, HTTP es el protocolo sobre el que se comunican las páginas web). El navegador comienza a consultar el servidor de origen del sitio web, también ocurre cada vez que cualquier otra comunicación utiliza HTTPS, incluidas las llamadas API y DNS over HTTPS/DNS over TLS.
+
+Durante el curso de un "TLS Handshake", el cliente y el servidor juntos harán lo siguiente:
+
+* Especificar qué versión de TLS (TLS 1.0, 1.2, 1.3, etc.) usarán.
+* Decidir qué suites de cifrado utilizarán.
+* Autenticar la identidad del servidor a través de la clave pública del servidor
+y la firma digital de la autoridad certificadora SSL.
+* Generar claves de sesión para usar encriptación simétrica (más eficiente y rápida que la asimétrica) después de completar el *TLS Handshake*.
+
+Y los pasos para realizar esto son los siguientes:
+
 * La computadora cliente envía un mensaje ``ClientHello`` al servidor con su versión Transport Layer Security (TLS), lista de algoritmos de cifrado y métodos de compresión disponibles.
 
 * El servidor responde con un mensaje ``ServerHello`` al cliente con la versión de TLS, el cifrado seleccionado, los métodos de compresión seleccionados y el certificado público del servidor firmado por una CA (Autoridad de Certificación, *Certificate Authority*). El certificado contiene una clave pública que utilizará el cliente para cifrar el resto del protocolo de enlace hasta que se pueda acordar una clave simétrica.
@@ -258,7 +311,9 @@ A veces, debido a la congestión de la red o conexiones de hardware inestables, 
 Protocolo HTTP
 ---------------
 
-Si el navegador que está utilizando fue escrito por Google, en lugar de enviar una solicitud HTTP para recuperar la página, enviará una solicitud para intentar negociar con el servidor una "actualización" de HTTP al protocolo SPDY.
+Si el navegador que está utilizando fue escrito por Google y tiene una versióna anterior al año 2016, en lugar de enviar una solicitud HTTP para recuperar la página, enviará una solicitud para intentar negociar con el servidor una "actualización" de HTTP al protocolo SPDY.
+
+Este protocolo, SPDY fue un intento de Google para mejorar la navegación web. Fue un protocolo experimental que quedó `descontinuado`_ en favor de HTTP/2.
 
 Si el cliente está utilizando el protocolo HTTP y no es compatible con SPDY, envía una solicitud al servidor de la forma (esto ocurrirá en la mayoría de los casos, pues es el estandar)::
 
@@ -307,6 +362,7 @@ El servidor HTTPD (HTTP Daemon) es el que maneja las solicitudes/respuestas en e
      ``PATCH``, ``DELETE``, ``CONNECT``, ``OPTIONS``, o ``TRACE``). En el caso de una URL ingresada directamente en la barra de direcciones, el método será ``GET``.
    * Dominio, en este caso google.com.
    * Página o ruta solicitada.  En este caso,  */* (puesto que no se solicitó una ruta/página específica, / es la ruta por defecto).
+* A menudo (siempre es cierto para Google y páginas webs grandes), el servidor que recibe la solicitud inicialmente es un balanceador de carga. Este equipo "leerá" la petición y la enviará a uno de los servidores web con los que mantiene comunicación. La decisión de a qué servidor web enviarlo variará según la utilizanción y el estado de cada uno de ellos, así como la petición en sí.
 * El servidor verifica que haya un host virtual configurado en el servidor que se corresponda con google.com.
 * El servidor verifica que google.com puede aceptar solicitudes GET.
 * El servidor verifica que el cliente tiene permiso para usar este método (por IP, autenticación, etc.).
@@ -450,3 +506,4 @@ Una vez que se ha completado el procesamiento, el navegador ejecuta el código J
 .. _ `ataques de degradación`: https://encyclopedia.kaspersky.com/glossary/downgrade-attack/
 .. _`modelo OSI`: https://es.wikipedia.org/wiki/Modelo_OSI
 .. _`lista HSTS`: https://source.chromium.org/chromium/chromium/src/+/main:net/http/transport_security_state_static.json 
+.. _`descontinuado`: https://blog.chromium.org/2016/02/transitioning-from-spdy-to-http2.html
